@@ -18,7 +18,7 @@ def setup_package():
             version = version,
             maintainer = "SciPy Developers",
             maintainer_email = "scipy-dev@scipy.org",
-            description = "SciPy Core",
+            description = "Core SciPy",
             url = "http://numeric.scipy.org",
 	    license = 'BSD',
             )
