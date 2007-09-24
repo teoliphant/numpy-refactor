@@ -3675,11 +3675,9 @@ PyArray_ArgMax(PyArrayObject *op, int axis, PyArrayObject *out)
         op = ap;
     }
 
-    /* Will get native-byte order contiguous copy. 
-     */
     ap = (PyArrayObject *)\
-        PyArray_ContiguousFromAny((PyObject *)op, 
-                                  op->descr->type_num, 1, 0);
+        PyArray_ContiguousFromAny((PyObject *)op,
+                                  PyArray_NOTYPE, 1, 0);
 
     Py_DECREF(op);
     if (ap == NULL) return NULL;
@@ -3695,7 +3693,7 @@ PyArray_ArgMax(PyArrayObject *op, int axis, PyArrayObject *out)
     if (m == 0) {
         PyErr_SetString(MultiArrayError,
                         "attempt to get argmax/argmin "\
-                        "of an empty sequence");
+                        "of an empty sequence??");
         goto fail;
     }
 
@@ -3721,7 +3719,7 @@ PyArray_ArgMax(PyArrayObject *op, int axis, PyArrayObject *out)
     }
 
     NPY_BEGIN_THREADS_DESCR(ap->descr)
-    n = PyArray_SIZE(ap)/m;
+        n = PyArray_SIZE(ap)/m;
     rptr = (intp *)rp->data;
     for (ip = ap->data, i=0; i<n; i++, ip+=elsize*m) {
         arg_func(ip, m, rptr, ap);
@@ -3729,7 +3727,7 @@ PyArray_ArgMax(PyArrayObject *op, int axis, PyArrayObject *out)
     }
     NPY_END_THREADS_DESCR(ap->descr)
 
-    Py_DECREF(ap);
+        Py_DECREF(ap);
     if (copyret) {
         PyArrayObject *obj;
         obj = (PyArrayObject *)rp->base;
@@ -5998,8 +5996,8 @@ array_from_text(PyArray_Descr *dtype, intp num, char *sep, size_t *nread,
 {
     PyArrayObject *r;
     intp i;
-    char *dptr, *clean_sep, *tmp;
-    int err = 0;
+    char *dptr, *clean_sep;
+
     intp thisbuf = 0;
     intp size;
     intp bytes, totalbytes;
@@ -6025,29 +6023,19 @@ array_from_text(PyArray_Descr *dtype, intp num, char *sep, size_t *nread,
         dptr += dtype->elsize;
         if (num < 0 && thisbuf == size) {
             totalbytes += bytes;
-            tmp = PyDataMem_RENEW(r->data, totalbytes);
-            if (tmp == NULL) {
-                err = 1;
-                break;
-            }
-	    r->data = tmp;
-            dptr = tmp + (totalbytes - bytes);
+            r->data = PyDataMem_RENEW(r->data, totalbytes);
+            dptr = r->data + (totalbytes - bytes);
             thisbuf = 0;
         }
         if (skip_sep(&stream, clean_sep, stream_data) < 0)
             break;
     }
     if (num < 0) {
-        tmp = PyDataMem_RENEW(r->data, (*nread)*dtype->elsize);
-	if (tmp == NULL) err=1;
-	else {
-	    PyArray_DIM(r,0) = *nread;
-	    r->data = tmp;
-	}
+        r->data = PyDataMem_RENEW(r->data, (*nread)*dtype->elsize);
+        PyArray_DIM(r,0) = *nread;
     }
     NPY_END_ALLOW_THREADS;
     free(clean_sep);
-    if (err == 1) PyErr_NoMemory();
     if (PyErr_Occurred()) {
         Py_DECREF(r);
         return NULL;
@@ -6239,7 +6227,6 @@ PyArray_FromFile(FILE *fp, PyArray_Descr *dtype, intp num, char *sep)
 {
     PyArrayObject *ret;
     size_t nread = 0;
-    char *tmp;
 
     if (PyDataType_REFCHK(dtype)) {
         PyErr_SetString(PyExc_ValueError,
@@ -6273,13 +6260,8 @@ PyArray_FromFile(FILE *fp, PyArray_Descr *dtype, intp num, char *sep)
     if (((intp) nread) < num) {
         fprintf(stderr, "%ld items requested but only %ld read\n",
                 (long) num, (long) nread);
-        tmp = PyDataMem_RENEW(ret->data,
-			      nread * ret->descr->elsize);
-	if (tmp == NULL) {
-	    Py_DECREF(ret);
-	    return PyErr_NoMemory();	    
-	}
-	ret->data = tmp;
+        ret->data = PyDataMem_RENEW(ret->data,
+                                    nread * ret->descr->elsize);
         PyArray_DIM(ret,0) = nread;
     }
     return (PyObject *)ret;
@@ -6400,12 +6382,11 @@ PyArray_FromIter(PyObject *obj, PyArray_Descr *dtype, intp count)
       (assuming realloc is reasonably good about reusing space...)
     */
     if (i==0) i = 1;
-    new_data = PyDataMem_RENEW(ret->data, i * elsize);
-    if (new_data == NULL) {
+    ret->data = PyDataMem_RENEW(ret->data, i * elsize);
+    if (ret->data == NULL) {
         PyErr_SetString(PyExc_MemoryError, "cannot allocate array memory");
         goto done;
     }
-    ret->data = new_data;
 
  done:
     Py_XDECREF(iter);
