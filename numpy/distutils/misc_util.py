@@ -22,7 +22,7 @@ __all__ = ['Configuration', 'get_numpy_include_dirs', 'default_config_dict',
            'get_script_files', 'get_lib_source_files', 'get_data_files',
            'dot_join', 'get_frame', 'minrelpath','njoin',
            'is_sequence', 'is_string', 'as_list', 'gpaths', 'get_language',
-           'quote_args']
+           'quote_args', 'get_build_architecture']
 
 def quote_args(args):
     # don't used _nt_quote_args as it does not check if
@@ -115,7 +115,7 @@ def get_mathlibs(path=None):
     """Return the MATHLIB line from config.h
     """
     if path is None:
-        path = get_numpy_include_dirs()[0]
+        path = os.path.join(get_numpy_include_dirs()[0], 'numpy')
     config_file = os.path.join(path,'config.h')
     fid = open(config_file)
     mathlibs = []
@@ -230,7 +230,7 @@ def make_temp_file(suffix='', prefix='', text=True):
 # Hooks for colored terminal output.
 # See also http://www.livinglogic.de/Python/ansistyle
 def terminal_has_colors():
-    if sys.platform=='cygwin' and not os.environ.has_key('USE_COLOR'):
+    if sys.platform=='cygwin' and 'USE_COLOR' not in os.environ:
         # Avoid importing curses that causes illegal operation
         # with a message:
         #  PYTHON2 caused an invalid page fault in
@@ -321,10 +321,9 @@ def msvc_runtime_library():
 def msvc_on_amd64():
     if not (sys.platform=='win32' or os.name=='nt'):
         return
-    from distutils.msvccompiler import get_build_architecture
     if get_build_architecture() != 'AMD64':
         return
-    if os.environ.has_key('DISTUTILS_USE_SDK'):
+    if 'DISTUTILS_USE_SDK' in os.environ:
         return
     # try to avoid _MSVCCompiler__root attribute error
     print 'Forcing DISTUTILS_USE_SDK=1'
@@ -705,7 +704,7 @@ class Configuration(object):
         - quiet
         """
         for key, value in options.items():
-            if self.options.has_key(key):
+            if key in self.options:
                 self.options[key] = value
             else:
                 raise ValueError,'Unknown option: '+key
@@ -935,7 +934,7 @@ class Configuration(object):
     def _optimize_data_files(self):
         data_dict = {}
         for p,files in self.data_files:
-            if not data_dict.has_key(p):
+            if p not in data_dict:
                 data_dict[p] = set()
             map(data_dict[p].add,files)
         self.data_files[:] = [(p,list(files)) for p,files in data_dict.items()]
@@ -1093,7 +1092,7 @@ class Configuration(object):
         ext_args['name'] = dot_join(self.name,name)
         ext_args['sources'] = sources
 
-        if ext_args.has_key('extra_info'):
+        if 'extra_info' in ext_args:
             extra_info = ext_args['extra_info']
             del ext_args['extra_info']
             if isinstance(extra_info, dict):
@@ -1406,7 +1405,7 @@ class Configuration(object):
 
 
 def get_cmd(cmdname, _cache={}):
-    if not _cache.has_key(cmdname):
+    if cmdname not in _cache:
         import distutils.core
         dist = distutils.core._setup_distribution
         if dist is None:
@@ -1444,7 +1443,7 @@ def default_config_dict(name = None, parent_name = None, local_path=None):
 
 def dict_append(d, **kws):
     for k, v in kws.items():
-        if d.has_key(k):
+        if k in d:
             ov = d[k]
             if isinstance(ov,str):
                 d[k] = v
@@ -1511,3 +1510,21 @@ def show():
 
     f.close()
     return target
+
+if sys.version[:3] >= '2.5':
+    def get_build_architecture():
+        from distutils.msvccompiler import get_build_architecture
+        return get_build_architecture()
+else:
+    #copied from python 2.5.1 distutils/msvccompiler.py
+    def get_build_architecture():
+        """Return the processor architecture.
+
+        Possible results are "Intel", "Itanium", or "AMD64".
+        """
+        prefix = " bit ("
+        i = sys.version.find(prefix)
+        if i == -1:
+            return "Intel"
+        j = sys.version.find(")", i)
+        return sys.version[i+len(prefix):j]

@@ -118,7 +118,7 @@ def byte_bounds(a):
     high is just *past* the last byte
 
     If the array is not single-segment, then it may not actually
-    use every byte between these bounds. 
+    use every byte between these bounds.
 
     The array provided must conform to the Python-side of the array interface
     """
@@ -140,7 +140,7 @@ def byte_bounds(a):
                 a_high += (shape-1)*stride
         a_high += bytes_a
     return a_low, a_high
-    
+
 
 def may_share_memory(a, b):
     """Determine if two arrays can share memory
@@ -275,7 +275,7 @@ def info(object=None,maxwidth=76,output=sys.stdout,toplevel='numpy'):
        Example:
           >>> from numpy import *
           >>> info(polyval) # doctest: +SKIP
-          
+
           polyval(p, x)
 
             Evaluate the polymnomial p at x.
@@ -323,7 +323,7 @@ def info(object=None,maxwidth=76,output=sys.stdout,toplevel='numpy'):
 
     elif inspect.isfunction(object):
         name = object.func_name
-        arguments = apply(inspect.formatargspec, inspect.getargspec(object))
+        arguments = inspect.formatargspec(*inspect.getargspec(object))
 
         if len(name+arguments) > maxwidth:
             argstr = _split_line(name, arguments, maxwidth)
@@ -338,7 +338,7 @@ def info(object=None,maxwidth=76,output=sys.stdout,toplevel='numpy'):
         arguments = "()"
         try:
             if hasattr(object, '__init__'):
-                arguments = apply(inspect.formatargspec, inspect.getargspec(object.__init__.im_func))
+                arguments = inspect.formatargspec(*inspect.getargspec(object.__init__.im_func))
                 arglist = arguments.split(', ')
                 if len(arglist) > 1:
                     arglist[1] = "("+arglist[1]
@@ -374,7 +374,7 @@ def info(object=None,maxwidth=76,output=sys.stdout,toplevel='numpy'):
         print >> output, "Instance of class: ", object.__class__.__name__
         print >> output
         if hasattr(object, '__call__'):
-            arguments = apply(inspect.formatargspec, inspect.getargspec(object.__call__.im_func))
+            arguments = inspect.formatargspec(*inspect.getargspec(object.__call__.im_func))
             arglist = arguments.split(', ')
             if len(arglist) > 1:
                 arglist[1] = "("+arglist[1]
@@ -402,7 +402,7 @@ def info(object=None,maxwidth=76,output=sys.stdout,toplevel='numpy'):
 
     elif inspect.ismethod(object):
         name = object.__name__
-        arguments = apply(inspect.formatargspec, inspect.getargspec(object.im_func))
+        arguments = inspect.formatargspec(*inspect.getargspec(object.im_func))
         arglist = arguments.split(', ')
         if len(arglist) > 1:
             arglist[1] = "("+arglist[1]

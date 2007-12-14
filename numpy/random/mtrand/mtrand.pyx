@@ -598,9 +598,9 @@ cdef class RandomState:
         diff = hi - lo - 1
         if diff < 0:
             raise ValueError("low >= high")
-    
+
         if size is None:
-            return rk_interval(diff, self.internal_state) + lo
+            return <long>rk_interval(diff, self.internal_state) + lo
         else:
             array = <ndarray>_sp.empty(size, int)
             length = PyArray_SIZE(array)
@@ -1510,8 +1510,8 @@ cdef class RandomState:
         parr = <ndarray>PyArray_ContiguousFromObject(pvals, NPY_DOUBLE, 1, 1)
         pix = <double*>parr.data
 
-        if kahan_sum(pix, d-1) > 1.0:
-            raise ValueError("sum(pvals) > 1.0")
+        if kahan_sum(pix, d-1) > (1.0 + 1e-12):
+            raise ValueError("sum(pvals[:-1]) > 1.0")
 
         if size is None:
             shape = (d,)

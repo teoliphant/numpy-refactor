@@ -257,7 +257,7 @@ class NumpyTest:
 
     Old-style test_suite(level=1) hooks are also supported.
     """
-    _check_testcase_name = re.compile(r'test.*').match
+    _check_testcase_name = re.compile(r'test.*|Test.*').match
     def check_testcase_name(self, name):
         """ Return True if name matches TestCase class.
         """
@@ -296,10 +296,10 @@ class NumpyTest:
     def rename(self, **kws):
         """Apply renaming submodule test file test_<name>.py to
         test_<newname>.py.
-        
+
         Usage: self.rename(name='newname') before calling the
         self.test() method.
-        
+
         If 'newname' is None, then no tests will be executed for a given
         module.
         """
@@ -379,7 +379,7 @@ class NumpyTest:
         test_dir_module = parent_module_name+'.tests'
         test_module_name = test_dir_module+'.'+test_module_name
 
-        if not sys.modules.has_key(test_dir_module):
+        if test_dir_module not in sys.modules:
             sys.modules[test_dir_module] = imp.new_module(test_dir_module)
 
         old_sys_path = sys.path[:]
@@ -414,9 +414,13 @@ class NumpyTest:
                 suite = obj(mthname)
                 if getattr(suite,'isrunnable',lambda mthname:1)(mthname):
                     suite_list.append(suite)
+        matched_suite_list = [suite for suite in suite_list \
+                              if self.testcase_match(suite.id()\
+                                                     .replace('__main__.',''))]
         if verbosity>=0:
-            self.info('  Found %s tests for %s' % (len(suite_list), module_name))
-        return suite_list
+            self.info('  Found %s/%s tests for %s' \
+                      % (len(matched_suite_list), len(suite_list), module_name))
+        return matched_suite_list
 
     def _test_suite_from_modules(self, this_package, level, verbosity):
         package_name = this_package.__name__
@@ -459,7 +463,8 @@ class NumpyTest:
             d = os.path.join(d, 'tests')
             if not os.path.isdir(d):
                 continue
-            if test_dirs_names.has_key(d): continue
+            if d in test_dirs_names:
+                continue
             test_dir_module = '.'.join(name.split('.')[:-1]+['tests'])
             test_dirs_names[d] = test_dir_module
 
@@ -473,7 +478,7 @@ class NumpyTest:
         for test_dir in test_dirs:
             test_dir_module = test_dirs_names[test_dir]
 
-            if not sys.modules.has_key(test_dir_module):
+            if test_dir_module not in sys.modules:
                 sys.modules[test_dir_module] = imp.new_module(test_dir_module)
 
             for fn in os.listdir(test_dir):
@@ -519,7 +524,8 @@ class NumpyTest:
         all_tests = unittest.TestSuite(suite_list)
         return all_tests
 
-    def test(self, level=1, verbosity=1, all=False):
+    def test(self, level=1, verbosity=1, all=False, sys_argv=[],
+             testcase_pattern='.*'):
         """Run Numpy module test suite with level and verbosity.
 
         level:
@@ -539,6 +545,11 @@ class NumpyTest:
           True            --- run all test files (like self.testall())
           False (default) --- only run test files associated with a module
 
+        sys_argv          --- replacement of sys.argv[1:] during running
+                              tests.
+
+        testcase_pattern  --- run only tests that match given pattern.
+
         It is assumed (when all=False) that package tests suite follows
         the following convention: for each package module, there exists
         file <packagepath>/tests/test_<modulename>.py that defines
@@ -554,6 +565,8 @@ class NumpyTest:
         else:
             this_package = self.package
 
+        self.testcase_match = re.compile(testcase_pattern).match
+
         if all:
             all_tests = self._test_suite_from_all_tests(this_package,
                                                         level, verbosity)
@@ -565,16 +578,19 @@ class NumpyTest:
             return all_tests
 
         runner = unittest.TextTestRunner(verbosity=verbosity)
+        old_sys_argv = sys.argv[1:]
+        sys.argv[1:] = sys_argv
         # Use the builtin displayhook. If the tests are being run
         # under IPython (for instance), any doctest test suites will
         # fail otherwise.
         old_displayhook = sys.displayhook
         sys.displayhook = sys.__displayhook__
         try:
-            runner.run(all_tests)
+            r = runner.run(all_tests)
         finally:
             sys.displayhook = old_displayhook
-        return runner
+        sys.argv[1:] = old_sys_argv
+        return r
 
     def testall(self, level=1,verbosity=1):
         """ Run Numpy module test suite with level and verbosity.
@@ -606,7 +622,9 @@ class NumpyTest:
         except ImportError:
             self.warn('Failed to import optparse module, ignoring.')
             return self.test()
-        usage = r'usage: %prog [-v <verbosity>] [-l <level>] [-s "<replacement of sys.argv[1:]>"]'
+        usage = r'usage: %prog [-v <verbosity>] [-l <level>]'\
+                r' [-s "<replacement of sys.argv[1:]>"]'\
+                r' [-t "<testcase pattern>"]'
         parser = OptionParser(usage)
         parser.add_option("-v", "--verbosity",
                           action="store",
@@ -623,11 +641,15 @@ class NumpyTest:
                           dest="sys_argv",
                           default='',
                           type='string')
+        parser.add_option("-t", "--testcase-pattern",
+                          action="store",
+                          dest="testcase_pattern",
+                          default=r'.*',
+                          type='string')
         (options, args) = parser.parse_args()
-        if options.sys_argv:
-            sys.argv[1:] = splitcmdline(options.sys_argv)
-        self.test(options.level,options.verbosity)
-        return
+        return self.test(options.level,options.verbosity,
+                         sys_argv=splitcmdline(options.sys_argv or ''),
+                         testcase_pattern=options.testcase_pattern)
 
     def warn(self, message):
         from numpy.distutils.misc_util import yellow_text

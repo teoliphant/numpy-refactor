@@ -207,7 +207,7 @@ def CCompiler_customize(self, dist, need_cxx=0):
         except (AttributeError, ValueError):
             pass
 
-        if hasattr(self,'compiler') and self.compiler[0].find('cc')>=0:
+        if hasattr(self,'compiler') and 'cc' in self.compiler[0]:
             if not self.compiler_cxx:
                 if self.compiler[0].startswith('gcc'):
                     a, b = 'gcc', 'g++'
@@ -217,7 +217,7 @@ def CCompiler_customize(self, dist, need_cxx=0):
                                     + self.compiler[1:]
         else:
             if hasattr(self,'compiler'):
-                 log.warn("#### %s #######" % (self.compiler,))
+                log.warn("#### %s #######" % (self.compiler,))
             log.warn('Missing compiler_cxx fix for '+self.__class__.__name__)
     return
 
@@ -384,68 +384,20 @@ def gen_lib_options(compiler, library_dirs, runtime_library_dirs, libraries):
     return lib_opts
 ccompiler.gen_lib_options = gen_lib_options
 
+# Also fix up the various compiler modules, which do
+# from distutils.ccompiler import gen_lib_options
+# Don't bother with mwerks, as we don't support Classic Mac.
+for _cc in ['msvc', 'bcpp', 'cygwinc', 'emxc', 'unixc']:
+    _m = sys.modules.get('distutils.'+_cc+'compiler')
+    if _m is not None:
+        setattr(getattr(_m, _cc+'compiler'), 'gen_lib_options',
+                gen_lib_options)
+
 _distutils_gen_preprocess_options = gen_preprocess_options
 def gen_preprocess_options (macros, include_dirs):
     include_dirs = quote_args(include_dirs)
     return _distutils_gen_preprocess_options(macros, include_dirs)
 ccompiler.gen_preprocess_options = gen_preprocess_options
-
-##Fix distutils.util.split_quoted:
-import re,string
-_wordchars_re = re.compile(r'[^\\\'\"%s ]*' % string.whitespace)
-_squote_re = re.compile(r"'(?:[^'\\]|\\.)*'")
-_dquote_re = re.compile(r'"(?:[^"\\]|\\.)*"')
-_has_white_re = re.compile(r'\s')
-def split_quoted(s):
-    s = string.strip(s)
-    words = []
-    pos = 0
-
-    while s:
-        m = _wordchars_re.match(s, pos)
-        end = m.end()
-        if end == len(s):
-            words.append(s[:end])
-            break
-
-        if s[end] in string.whitespace: # unescaped, unquoted whitespace: now
-            words.append(s[:end])       # we definitely have a word delimiter
-            s = string.lstrip(s[end:])
-            pos = 0
-
-        elif s[end] == '\\':            # preserve whatever is being escaped;
-                                        # will become part of the current word
-            s = s[:end] + s[end+1:]
-            pos = end+1
-
-        else:
-            if s[end] == "'":           # slurp singly-quoted string
-                m = _squote_re.match(s, end)
-            elif s[end] == '"':         # slurp doubly-quoted string
-                m = _dquote_re.match(s, end)
-            else:
-                raise RuntimeError, \
-                      "this can't happen (bad char '%c')" % s[end]
-
-            if m is None:
-                raise ValueError, \
-                      "bad string (mismatched %s quotes?)" % s[end]
-
-            (beg, end) = m.span()
-            if _has_white_re.search(s[beg+1:end-1]):
-                s = s[:beg] + s[beg+1:end-1] + s[end:]
-                pos = m.end() - 2
-            else:
-                # Keeping quotes when a quoted word does not contain
-                # white-space. XXX: send a patch to distutils
-                pos = m.end()
-
-        if pos >= len(s):
-            words.append(s)
-            break
-
-    return words
-ccompiler.split_quoted = split_quoted
 
 # define DISTUTILS_USE_SDK when necessary to workaround distutils/msvccompiler.py bug
 msvc_on_amd64()

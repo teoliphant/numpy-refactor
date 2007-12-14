@@ -1050,7 +1050,7 @@ typedef int (PyArray_ScalarKindFunc)(void *);
 typedef void (PyArray_FastClipFunc)(void *in, npy_intp n_in, void *min,
                                     void *max, void *out);
 typedef void (PyArray_FastPutmaskFunc)(void *in, void *mask, npy_intp n_in,
-                                       void *values, npy_intp nv, npy_intp swap);
+                                       void *values, npy_intp nv);
 
 typedef struct {
         npy_intp *ptr;
@@ -1282,7 +1282,7 @@ typedef int (PyArray_FinalizeFunc)(PyArrayObject *, PyObject *);
    and WRITEABLE. */
 #define NPY_ENSURECOPY    0x0020
 
-/* Make sure the returned array is an ndarray or a bigndarray */
+/* Make sure the returned array is a base-class ndarray */
 #define NPY_ENSUREARRAY   0x0040
 
 /* Make sure that the strides are in units of the element size

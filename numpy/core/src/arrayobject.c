@@ -3045,8 +3045,7 @@ array_subscript_nice(PyArrayObject *self, PyObject *op)
         if ((op == Py_Ellipsis) || PyString_Check(op) || PyUnicode_Check(op))
             noellipses = FALSE;
         else if (PyBool_Check(op) || PyArray_IsScalar(op, Bool) ||
-                 (PyArray_Check(op) && (PyArray_DIMS(op)==0) &&
-                  PyArray_ISBOOL(op)))
+                 (PyArray_Check(op) && (PyArray_DIMS(op)==0)))
             noellipses = FALSE;
         else if (PySequence_Check(op)) {
             int n, i;
@@ -9336,7 +9335,14 @@ iter_ass_sub_Bool(PyArrayIterObject *self, PyArrayObject *ind,
                         "boolean index array should have 1 dimension");
         return -1;
     }
+
     index = ind->dimensions[0];
+    if (index > self->size) {
+        PyErr_SetString(PyExc_ValueError,
+                        "boolean index array has too many values");
+        return -1;
+    }
+
     strides = ind->strides[0];
     dptr = ind->data;
     PyArray_ITER_RESET(self);

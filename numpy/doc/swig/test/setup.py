@@ -13,24 +13,39 @@ try:
 except AttributeError:
     numpy_include = numpy.get_numpy_include()
 
+# Array extension module
+_Array = Extension("_Array",
+                   ["Array_wrap.cxx",
+                    "Array1.cxx",
+                    "Array2.cxx"],
+                   include_dirs = [numpy_include],
+                   )
+
+# Farray extension module
+_Farray = Extension("_Farray",
+                    ["Farray_wrap.cxx",
+                     "Farray.cxx"],
+                    include_dirs = [numpy_include],
+                    )
+
 # _Vector extension module
 _Vector = Extension("_Vector",
                     ["Vector_wrap.cxx",
-                     "vector.cxx"],
+                     "Vector.cxx"],
                     include_dirs = [numpy_include],
                     )
 
 # _Matrix extension module
 _Matrix = Extension("_Matrix",
                     ["Matrix_wrap.cxx",
-                     "matrix.cxx"],
+                     "Matrix.cxx"],
                     include_dirs = [numpy_include],
                     )
 
 # _Tensor extension module
 _Tensor = Extension("_Tensor",
                     ["Tensor_wrap.cxx",
-                     "tensor.cxx"],
+                     "Tensor.cxx"],
                     include_dirs = [numpy_include],
                     )
 
@@ -38,6 +53,6 @@ _Tensor = Extension("_Tensor",
 setup(name        = "NumpyTypemapTests",
       description = "Functions that work on arrays",
       author      = "Bill Spotz",
-      py_modules  = ["Vector", "Matrix", "Tensor"],
-      ext_modules = [_Vector , _Matrix , _Tensor ]
+      py_modules  = ["Array", "Farray", "Vector", "Matrix", "Tensor"],
+      ext_modules = [_Array , _Farray , _Vector , _Matrix , _Tensor ]
       )

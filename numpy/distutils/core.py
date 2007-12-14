@@ -6,7 +6,7 @@ if 'setuptools' in sys.modules:
     have_setuptools = True
     from setuptools import setup as old_setup
     # easy_install imports math, it may be picked up from cwd
-    from setuptools.command import develop, easy_install
+    from setuptools.command import easy_install
     try:
         # very old versions of setuptools don't have this
         from setuptools.command import bdist_egg
@@ -42,7 +42,9 @@ numpy_cmdclass = {'build':            build.build,
                   'bdist_rpm':        bdist_rpm.bdist_rpm,
                   }
 if have_setuptools:
-    from numpy.distutils.command import egg_info
+    # Use our own versions of develop and egg_info to ensure that build_src is
+    # handled appropriately.
+    from numpy.distutils.command import develop, egg_info
     numpy_cmdclass['bdist_egg'] = bdist_egg.bdist_egg
     numpy_cmdclass['develop'] = develop.develop
     numpy_cmdclass['easy_install'] = easy_install.easy_install
@@ -50,7 +52,7 @@ if have_setuptools:
 
 def _dict_append(d, **kws):
     for k,v in kws.items():
-        if not d.has_key(k):
+        if k not in d:
             d[k] = v
             continue
         dv = d[k]
@@ -92,38 +94,38 @@ def get_distribution(always=False):
     # We can't use isinstance, as the DistributionWithoutHelpCommands
     # class is local to a function in setuptools.command.easy_install
     if dist is not None and \
-            repr(dist).find('DistributionWithoutHelpCommands') != -1:
+            'DistributionWithoutHelpCommands' in repr(dist):
         dist = None
     if always and dist is None:
         dist = distutils.dist.Distribution()
     return dist
 
-def _exit_interactive_session(_cache=[]): 
-    if _cache: 
-        return # been here 
-    _cache.append(1) 
-    print '-'*72 
-    raw_input('Press ENTER to close the interactive session..') 
-    print '='*72 
+def _exit_interactive_session(_cache=[]):
+    if _cache:
+        return # been here
+    _cache.append(1)
+    print '-'*72
+    raw_input('Press ENTER to close the interactive session..')
+    print '='*72
 
 def setup(**attr):
 
-    if len(sys.argv)<=1 and not attr.get('script_args',[]): 
-        from interactive import interactive_sys_argv 
-        import atexit 
-        atexit.register(_exit_interactive_session) 
-        sys.argv[:] = interactive_sys_argv(sys.argv) 
-        if len(sys.argv)>1: 
-            return setup(**attr) 
+    if len(sys.argv)<=1 and not attr.get('script_args',[]):
+        from interactive import interactive_sys_argv
+        import atexit
+        atexit.register(_exit_interactive_session)
+        sys.argv[:] = interactive_sys_argv(sys.argv)
+        if len(sys.argv)>1:
+            return setup(**attr)
 
     cmdclass = numpy_cmdclass.copy()
 
     new_attr = attr.copy()
-    if new_attr.has_key('cmdclass'):
+    if 'cmdclass' in new_attr:
         cmdclass.update(new_attr['cmdclass'])
     new_attr['cmdclass'] = cmdclass
 
-    if new_attr.has_key('configuration'):
+    if 'configuration' in new_attr:
         # To avoid calling configuration if there are any errors
         # or help request in command in the line.
         configuration = new_attr.pop('configuration')
@@ -163,14 +165,14 @@ def setup(**attr):
                                 "library %r" % (item,))
         ext.libraries = new_libraries
     if libraries:
-        if not new_attr.has_key('libraries'):
+        if 'libraries' not in new_attr:
             new_attr['libraries'] = []
         for item in libraries:
             _check_append_library(new_attr['libraries'], item)
 
     # sources in ext_modules or libraries may contain header files
-    if (new_attr.has_key('ext_modules') or new_attr.has_key('libraries')) \
-       and not new_attr.has_key('headers'):
+    if ('ext_modules' in new_attr or 'libraries' in new_attr) \
+       and 'headers' not in new_attr:
         new_attr['headers'] = []
 
     return old_setup(**new_attr)

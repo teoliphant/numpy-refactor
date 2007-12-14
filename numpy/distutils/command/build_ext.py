@@ -84,14 +84,14 @@ class build_ext (old_build_ext):
         clibs = {}
         if build_clib is not None:
             for libname,build_info in build_clib.libraries or []:
-                if clibs.has_key(libname) and clibs[libname]!=build_info:
+                if libname in clibs and clibs[libname] != build_info:
                     log.warn('library %r defined more than once,'\
                              ' overwriting build_info\n%s... \nwith\n%s...' \
                              % (libname, `clibs[libname]`[:300], `build_info`[:300]))
                 clibs[libname] = build_info
         # .. and distribution libraries:
         for libname,build_info in self.distribution.libraries or []:
-            if clibs.has_key(libname):
+            if libname in clibs:
                 # build_clib libraries have a precedence before distribution ones
                 continue
             clibs[libname] = build_info
@@ -105,13 +105,14 @@ class build_ext (old_build_ext):
             c_lib_dirs = []
             macros = []
             for libname in ext.libraries:
-                if clibs.has_key(libname):
+                if libname in clibs:
                     binfo = clibs[libname]
                     c_libs += binfo.get('libraries',[])
                     c_lib_dirs += binfo.get('library_dirs',[])
                     for m in binfo.get('macros',[]):
                         if m not in macros:
                             macros.append(m)
+
                 for l in clibs.get(libname,{}).get('source_languages',[]):
                     ext_languages.add(l)
             if c_libs:

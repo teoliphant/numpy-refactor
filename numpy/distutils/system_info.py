@@ -143,7 +143,18 @@ else:
                             '/opt/include', '/usr/include',
                             '/opt/local/include', '/sw/include']
     default_src_dirs = ['.','/usr/local/src', '/opt/src','/sw/src']
-    default_x11_lib_dirs = ['/usr/X11R6/lib','/usr/X11/lib','/usr/lib']
+
+    try:
+        platform = os.uname()
+        bit64 = platform[-1].endswith('64')
+    except:
+        bit64 = False
+
+    if bit64:
+        default_x11_lib_dirs = ['/usr/lib64']
+    else:
+        default_x11_lib_dirs = ['/usr/X11R6/lib','/usr/X11/lib','/usr/lib']
+
     default_x11_include_dirs = ['/usr/X11R6/include','/usr/X11/include',
                                 '/usr/include']
 
@@ -385,7 +396,7 @@ class system_info:
         self.saved_results[self.__class__.__name__] = info
 
     def has_info(self):
-        return self.saved_results.has_key(self.__class__.__name__)
+        return self.__class__.__name__ in self.saved_results
 
     def get_info(self,notfound_action=0):
         """ Return a dictonary with items that are compatible
@@ -430,13 +441,13 @@ class system_info:
             if is_sequence(env_var):
                 e0 = env_var[-1]
                 for e in env_var:
-                    if os.environ.has_key(e):
+                    if e in os.environ:
                         e0 = e
                         break
                 if not env_var[0]==e0:
                     log.info('Setting %s=%s' % (env_var[0],e0))
                 env_var = e0
-        if env_var and os.environ.has_key(env_var):
+        if env_var and env_var in os.environ:
             d = os.environ[env_var]
             if d=='None':
                 log.info('Disabled %s: %s',self.__class__.__name__,'(%s is None)' \
@@ -830,7 +841,7 @@ class lapack_mkl_info(mkl_info):
             lapack_libs = self.get_libs('lapack_libs',['mkl_lapack'])
         else:
             lapack_libs = self.get_libs('lapack_libs',['mkl_lapack32','mkl_lapack64'])
-            
+
         info = {'libraries': lapack_libs}
         dict_append(info,**mkl)
         self.set_info(**info)
@@ -1072,7 +1083,7 @@ class lapack_src_info(system_info):
         tgexc tgsen tgsja tgsna tgsy2 tgsyl tpcon tprfs tptri tptrs
         trcon trevc trexc trrfs trsen trsna trsyl trti2 trtri trtrs
         tzrqf tzrzf
-        
+
         lacn2 lahr2 stemr laqr0 laqr1 laqr2 laqr3 laqr4 laqr5
         ''' # [s|c|d|z]*.f
         sd_lasrc = '''
@@ -1135,7 +1146,7 @@ def get_atlas_version(**config):
     libraries = config.get('libraries', [])
     library_dirs = config.get('library_dirs', [])
     key = (tuple(libraries), tuple(library_dirs))
-    if _cached_atlas_version.has_key(key):
+    if key in _cached_atlas_version:
         return _cached_atlas_version[key]
     c = cmd_config(Distribution())
     atlas_version = None
@@ -1218,7 +1229,7 @@ class lapack_opt_info(system_info):
         if atlas_info:
             version_info = atlas_info.copy()
             atlas_version = get_atlas_version(**version_info)
-            if not atlas_info.has_key('define_macros'):
+            if 'define_macros' not in atlas_info:
                 atlas_info['define_macros'] = []
             if atlas_version is None:
                 atlas_info['define_macros'].append(('NO_ATLAS_INFO',2))
@@ -1317,7 +1328,7 @@ class blas_opt_info(system_info):
         if atlas_info:
             version_info = atlas_info.copy()
             atlas_version = get_atlas_version(**version_info)
-            if not atlas_info.has_key('define_macros'):
+            if 'define_macros' not in atlas_info:
                 atlas_info['define_macros'] = []
             if atlas_version is None:
                 atlas_info['define_macros'].append(('NO_ATLAS_INFO',2))
@@ -1646,7 +1657,7 @@ class _pkg_config_info(system_info):
     cflags_flag = '--cflags'
 
     def get_config_exe(self):
-        if os.environ.has_key(self.config_env_var):
+        if self.config_env_var in os.environ:
             return os.environ[self.config_env_var]
         return self.default_config_exe
     def get_config_output(self, config_exe, option):
@@ -1879,7 +1890,7 @@ def dict_append(d,**kws):
         if k=='language':
             languages.append(v)
             continue
-        if d.has_key(k):
+        if k in d:
             if k in ['library_dirs','include_dirs','define_macros']:
                 [d[k].append(vv) for vv in v if vv not in d[k]]
             else:

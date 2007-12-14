@@ -22,7 +22,7 @@ def assert_valid_refcount(op):
 
     assert(sys.getrefcount(i) >= rc)
 
-class test_regression(NumpyTestCase):
+class TestRegression(NumpyTestCase):
     def check_invalid_round(self,level=rlevel):
         """Ticket #3"""
         v = 4.7599999999999998
@@ -697,6 +697,11 @@ class test_regression(NumpyTestCase):
         x = N.array(['a']*32)
         assert_array_equal(x.argsort(kind='m'), N.arange(32))
 
+    def check_argmax_byteorder(self, level=rlevel):
+        """Ticket #546"""
+        a = N.arange(3, dtype='>f')
+        assert a[a.argmax()] == a.max()
+
     def check_numeric_random(self, level=rlevel):
         """Ticket #552"""
         from numpy.oldnumeric.random_array import randint
@@ -715,6 +720,53 @@ class test_regression(NumpyTestCase):
         y = N.poly1d([3,4])
         assert x != y
         assert x == x
+
+    def check_mem_insert(self, level=rlevel):
+        """Ticket #572"""
+        N.lib.place(1,1,1)
+
+    def check_dot_negative_stride(self, level=rlevel):
+        """Ticket #588"""
+        x = N.array([[1,5,25,125.,625]])
+        y = N.array([[20.],[160.],[640.],[1280.],[1024.]])
+        z = y[::-1].copy()
+        y2 = y[::-1]
+        assert_equal(N.dot(x,z),N.dot(x,y2))
+
+    def check_object_casting(self, level=rlevel):
+        def rs():
+            x = N.ones([484,286])
+            y = N.zeros([484,286])
+            x |= y
+        self.failUnlessRaises(TypeError,rs)
+
+    def check_unicode_scalar(self, level=rlevel):
+        """Ticket #600"""
+        import cPickle
+        x = N.array(["DROND", "DROND1"], dtype="U6")
+        el = x[1]
+        new = cPickle.loads(cPickle.dumps(el))
+        assert_equal(new, el)
+
+    def check_arange_non_native_dtype(self, level=rlevel):
+        """Ticket #616"""
+        for T in ('>f4','<f4'):
+            dt = N.dtype(T)
+            assert_equal(N.arange(0,dtype=dt).dtype,dt)
+            assert_equal(N.arange(0.5,dtype=dt).dtype,dt)
+            assert_equal(N.arange(5,dtype=dt).dtype,dt)
+
+    def check_bool_indexing_invalid_nr_elements(self, level=rlevel):
+        s = N.ones(10,dtype=float)
+        x = N.array((15,),dtype=float)
+        def ia(x,s): x[(s>0)]=1.0
+        self.failUnlessRaises(ValueError,ia,x,s)
+
+    def check_mem_scalar_indexing(self, level=rlevel):
+        """Ticket #603"""
+        x = N.array([0],dtype=float)
+        index = N.array(0,dtype=N.int32)
+        x[index]
 
 
 if __name__ == "__main__":

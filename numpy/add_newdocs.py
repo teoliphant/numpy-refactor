@@ -339,18 +339,30 @@ add_newdoc('numpy.core.multiarray','set_numeric_ops',
     """)
 
 add_newdoc('numpy.core.multiarray','where',
-    """where(condition, | x, y)
+    """where(condition, x, y) or where(condition)
 
-    The result is shaped like condition and has elements of x and y where
-    condition is respectively true or false.  If x or y are not given,
-    condition.nonzero() is returned.
+    Return elements from `x` or `y`, depending on `condition`.
 
-    To group the indices by element, rather than dimension, use
+    *Parameters*:
+        condition : array of bool
+            When True, yield x, otherwise yield y.
+        x,y : 1-dimensional arrays
+            Values from which to choose.
 
-        transpose(where(condition))
+    *Notes*
+        This is equivalent to
 
-    instead. This always results in a 2d array, with a row of indices for
-    each element that satisfies the condition.
+            [xv if c else yv for (c,xv,yv) in zip(condition,x,y)]
+
+        The result is shaped like `condition` and has elements of `x`
+        or `y` where `condition` is respectively True or False.
+
+        In the special case, where only `condition` is given, the
+        tuple condition.nonzero() is returned, instead.
+
+    *Examples*
+        >>> where([True,False,True],[1,2,3],[4,5,6])
+        array([1, 5, 3])
 
     """)
 
@@ -367,25 +379,35 @@ add_newdoc('numpy.core.multiarray','lexsort',
     sort order, and so on).  The keys argument must be a sequence of things
     that can be converted to arrays of the same shape.
 
-    Parameters:
+    *Parameters*:
 
-        a : array type
+        keys : (k,N) array or tuple of (N,) sequences
             Array containing values that the returned indices should sort.
 
         axis : integer
-            Axis to be indirectly sorted. None indicates that the flattened
-            array should be used. Default is -1.
+            Axis to be indirectly sorted.  Default is -1 (i.e. last axis).
 
-    Returns:
+    *Returns*:
 
-        indices : integer array
-            Array of indices that sort the keys along the specified axis. The
-            array has the same shape as the keys.
+        indices : (N,) integer array
+            Array of indices that sort the keys along the specified axis.
 
-    SeeAlso:
+    *See Also*:
 
-        argsort : indirect sort
-        sort : inplace sort
+        `argsort` : indirect sort
+        `sort` : inplace sort
+
+    *Examples*
+
+        >>> a = [1,5,1,4,3,6,7]
+        >>> b = [9,4,0,4,0,4,3]
+        >>> ind = lexsort((b,a))
+        >>> print ind
+        [2 0 4 3 1 5 6]
+        >>> print take(a,ind)
+        [1 1 3 4 5 6 7]
+        >>> print take(b,ind)
+        [0 9 0 4 4 4 3]
 
     """)
 

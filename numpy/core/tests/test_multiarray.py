@@ -3,7 +3,9 @@ from numpy.core import *
 from numpy import random
 import numpy as N
 
-class test_flags(NumpyTestCase):
+import tempfile
+
+class TestFlags(NumpyTestCase):
     def setUp(self):
         self.a = arange(10)
 
@@ -27,7 +29,7 @@ class test_flags(NumpyTestCase):
         assert_equal(self.a.flags.updateifcopy, False)
 
 
-class test_attributes(NumpyTestCase):
+class TestAttributes(NumpyTestCase):
     def setUp(self):
         self.one = arange(10)
         self.two = arange(20).reshape(4,5)
@@ -104,14 +106,14 @@ class test_attributes(NumpyTestCase):
         x.fill(x[0])
         assert_equal(x['f1'][1], x['f1'][0])
 
-class test_dtypedescr(NumpyTestCase):
+class TestDtypedescr(NumpyTestCase):
     def check_construction(self):
         d1 = dtype('i4')
         assert_equal(d1, dtype(int32))
         d2 = dtype('f8')
         assert_equal(d2, dtype(float64))
 
-class test_fromstring(NumpyTestCase):
+class TestFromstring(NumpyTestCase):
     def check_binary(self):
         a = fromstring('\x00\x00\x80?\x00\x00\x00@\x00\x00@@\x00\x00\x80@',dtype='<f4')
         assert_array_equal(a, array([1,2,3,4]))
@@ -140,7 +142,7 @@ class test_fromstring(NumpyTestCase):
         assert_array_equal(a, [1.,2.,3.,4.])
         assert_array_equal(a,b)
 
-class test_zero_rank(NumpyTestCase):
+class TestZeroRank(NumpyTestCase):
     def setUp(self):
         self.d = array(0), array('x', object)
 
@@ -216,14 +218,14 @@ class test_zero_rank(NumpyTestCase):
         x = array(2)
         self.failUnlessRaises(ValueError, add, x, [1], x)
 
-class test_creation(NumpyTestCase):
+class TestCreation(NumpyTestCase):
     def check_from_attribute(self):
         class x(object):
             def __array__(self, dtype=None):
                 pass
         self.failUnlessRaises(ValueError, array, x())
 
-class test_bool(NumpyTestCase):
+class TestBool(NumpyTestCase):
     def check_test_interning(self):
         a0 = bool_(0)
         b0 = bool_(False)
@@ -235,7 +237,7 @@ class test_bool(NumpyTestCase):
         self.failUnless(array(True)[()] is a1)
 
 
-class test_methods(NumpyTestCase):
+class TestMethods(NumpyTestCase):
     def check_test_round(self):
         assert_equal(array([1.2,1.5]).round(), [1,2])
         assert_equal(array(1.5).round(), 2)
@@ -249,13 +251,13 @@ class test_methods(NumpyTestCase):
         self.failUnlessRaises(ValueError, lambda: a.transpose(0,0))
         self.failUnlessRaises(ValueError, lambda: a.transpose(0,1,2))
 
-class test_subscripting(NumpyTestCase):
+class TestSubscripting(NumpyTestCase):
     def check_test_zero_rank(self):
         x = array([1,2,3])
         self.failUnless(isinstance(x[0], int))
         self.failUnless(type(x[0, ...]) is ndarray)
 
-class test_pickling(NumpyTestCase):
+class TestPickling(NumpyTestCase):
     def check_both(self):
         import pickle
         carray = array([[2,9],[7,0],[3,8]])
@@ -302,7 +304,7 @@ class test_pickling(NumpyTestCase):
         p = loads(s)
         assert_equal(a, p)
 
-class test_fancy_indexing(NumpyTestCase):
+class TestFancyIndexing(NumpyTestCase):
     def check_list(self):
         x = ones((1,1))
         x[:,[0]] = 2.0
@@ -320,7 +322,7 @@ class test_fancy_indexing(NumpyTestCase):
         x[:,:,(0,)] = 2.0
         assert_array_equal(x, array([[[2.0]]]))
 
-class test_string_compare(NumpyTestCase):
+class TestStringCompare(NumpyTestCase):
     def check_string(self):
         g1 = array(["This","is","example"])
         g2 = array(["This","was","example"])
@@ -353,7 +355,7 @@ class test_string_compare(NumpyTestCase):
         assert_array_equal(g1 > g2,  [g1[i] > g2[i] for i in [0,1,2]])
 
 
-class test_argmax(NumpyTestCase):
+class TestArgmax(NumpyTestCase):
     def check_all(self):
         a = random.normal(0,1,(4,5,6,7,8))
         for i in xrange(a.ndim):
@@ -363,13 +365,13 @@ class test_argmax(NumpyTestCase):
             axes.remove(i)
             assert all(amax == aargmax.choose(*a.transpose(i,*axes)))
 
-class test_newaxis(NumpyTestCase):
+class TestNewaxis(NumpyTestCase):
     def check_basic(self):
         sk = array([0,-0.1,0.1])
         res = 250*sk[:,newaxis]
         assert_almost_equal(res.ravel(),250*sk)
 
-class test_clip(NumpyTestCase):
+class TestClip(NumpyTestCase):
     def _check_range(self,x,cmin,cmax):
         assert N.all(x >= cmin)
         assert N.all(x <= cmax)
@@ -404,7 +406,7 @@ class test_clip(NumpyTestCase):
         return x
 
     def check_basic(self):
-        for inplace in [False, True]: 
+        for inplace in [False, True]:
             self._clip_type('float',1024,-12.8,100.2, inplace=inplace)
             self._clip_type('float',1024,0,0, inplace=inplace)
 
@@ -420,7 +422,16 @@ class test_clip(NumpyTestCase):
         y = rec['x'].clip(-0.3,0.5)
         self._check_range(y,-0.3,0.5)
 
-class test_putmask(ParametricTestCase):
+    def check_max_or_min(self):
+        val = N.array([0,1,2,3,4,5,6,7])
+        x = val.clip(3)
+        assert N.all(x >= 3)
+        x = val.clip(min=3)
+        assert N.all(x >= 3)
+        x = val.clip(max=4)
+        assert N.all(x <= 4)
+
+class TestPutmask(ParametricTestCase):
     def tst_basic(self,x,T,mask,val):
         N.putmask(x,mask,val)
         assert N.all(x[mask] == T(val))
@@ -435,8 +446,8 @@ class test_putmask(ParametricTestCase):
         tests = []
         for val in [-100,0,15]:
             for types in N.sctypes.itervalues():
-                tests.extend((self.tst_basic,x.copy().astype(T),T,mask,val)
-                             for T in types if T not in unchecked_types)
+                tests.extend([(self.tst_basic,x.copy().astype(T),T,mask,val)
+                              for T in types if T not in unchecked_types])
         return tests
 
     def test_mask_size(self):
@@ -449,16 +460,16 @@ class test_putmask(ParametricTestCase):
         assert_array_equal(x,[-1,2,-1])
 
     def testip_byteorder(self):
-        return ((self.tst_byteorder,dtype) for dtype in ('>i4','<i4'))
+        return [(self.tst_byteorder,dtype) for dtype in ('>i4','<i4')]
 
     def test_record_array(self):
-##         Not supported yet
-##
-##         rec = N.array([(-5, 2.0, 3.0), (5.0, 4.0, 3.0)],
-##                       dtype=[('x', '<f8'), ('y', '<f8'), ('z', '<f8')])
-##         N.putmask(rec['x'],[True,False],10)
-##         assert_array_equal(rec['x'],[10,5])
-        pass
+        # Note mixed byteorder.
+        rec = N.array([(-5, 2.0, 3.0), (5.0, 4.0, 3.0)],
+                      dtype=[('x', '<f8'), ('y', '>f8'), ('z', '<f8')])
+        N.putmask(rec['x'],[True,False],10)
+        assert_array_equal(rec['x'],[10,5])
+        N.putmask(rec['y'],[True,False],10)
+        assert_array_equal(rec['y'],[10,4])
 
     def test_masked_array(self):
         ## x = N.array([1,2,3])
@@ -466,10 +477,74 @@ class test_putmask(ParametricTestCase):
         ## N.putmask(z,[True,True,True],3)
         pass
 
-# Import tests from unicode
+class TestLexsort(NumpyTestCase):
+    def test_basic(self):
+        a = [1,2,1,3,1,5]
+        b = [0,4,5,6,2,3]
+        idx = N.lexsort((b,a))
+        expected_idx = N.array([0,4,2,1,3,5])
+        assert_array_equal(idx,expected_idx)
+
+        x = N.vstack((b,a))
+        idx = N.lexsort(x)
+        assert_array_equal(idx,expected_idx)
+
+        assert_array_equal(x[1][idx],N.sort(x[1]))
+
+class TestFromToFile(NumpyTestCase):
+    def setUp(self):
+        shape = (4,7)
+        rand = N.random.random
+
+        self.x = rand(shape) + rand(shape).astype(N.complex)*1j
+        self.dtype = N.complex
+
+    def test_file(self):
+        f = tempfile.TemporaryFile()
+        self.x.tofile(f)
+        f.seek(0)
+        y = N.fromfile(f,dtype=self.dtype)
+        assert_array_equal(y,self.x.flat)
+
+    def test_filename(self):
+        filename = tempfile.mktemp()
+        f = open(filename,'wb')
+        self.x.tofile(f)
+        f.close()
+        y = N.fromfile(filename,dtype=self.dtype)
+        assert_array_equal(y,self.x.flat)
+
+class TestFromBuffer(ParametricTestCase):
+    def tst_basic(self,buffer,expected,kwargs):
+        assert_array_equal(N.frombuffer(buffer,**kwargs),expected)
+
+    def testip_basic(self):
+        tests = []
+        for byteorder in ['<','>']:
+            for dtype in [float,int,N.complex]:
+                dt = N.dtype(dtype).newbyteorder(byteorder)
+                x = (N.random.random((4,7))*5).astype(dt)
+                buf = x.tostring()
+                tests.append((self.tst_basic,buf,x.flat,{'dtype':dt}))
+        return tests
+
+class TestResize(NumpyTestCase):
+    def test_basic(self):
+        x = N.eye(3)
+        x.resize((5,5))
+        assert_array_equal(x.flat[:9],N.eye(3).flat)
+        assert_array_equal(x[9:].flat,0)
+
+    def test_check_reference(self):
+        x = N.eye(3)
+        y = x
+        self.failUnlessRaises(ValueError,x.resize,(5,1))
+
+# Import tests without matching module names
 set_local_path()
 from test_unicode import *
 from test_regression import *
+from test_ufunc import *
 restore_path()
 
 if __name__ == "__main__":

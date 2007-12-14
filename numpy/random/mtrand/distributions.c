@@ -389,7 +389,7 @@ long rk_binomial_inversion(rk_state *state, long n, double p)
         state->q = q = 1.0 - p;
         state->r = qn = exp(n * log(q));
         state->c = np = n*p;
-        state->m = bound = min(n, np + 10.0*sqrt(np));
+        state->m = bound = min(n, np + 10.0*sqrt(np*q + 1));
     } else
     {
         q = state->q;
@@ -549,6 +549,12 @@ double rk_standard_t(rk_state *state, double df)
     return X;
 }
 
+/* Uses the rejection algorithm compared against the wrapped Cauchy
+   distribution suggested by Best and Fisher and documented in 
+   Chapter 9 of Luc's Non-Uniform Random Variate Generation.
+   http://cg.scs.carleton.ca/~luc/rnbookindex.html
+   (but corrected to match the algorithm in R and Python)
+*/
 double rk_vonmises(rk_state *state, double mu, double kappa)
 {
     double r, rho, s;
@@ -567,32 +573,27 @@ double rk_vonmises(rk_state *state, double mu, double kappa)
 
         while (1)
         {
-            U = 2*rk_double(state) - 1;
-            V = 2*rk_double(state) - 1;
+	    U = rk_double(state);
             Z = cos(M_PI*U);
             W = (1 + s*Z)/(s + Z);
             Y = kappa * (s - W);
+            V = rk_double(state);
             if ((Y*(2-Y) - V >= 0) || (log(Y/V)+1 - Y >= 0))
             {
                 break;
             }
         }
 
-        if (U < 0)
+	U = rk_double(state);
+
+	result = acos(W);
+        if (U < 0.5)
         {
-            result = acos(W);
+	    result = -result;
         }
-        else
-        {
-            result = -acos(W);
-        }
-        result += mu + M_PI;
+        result += mu;
         mod = fmod(result, 2*M_PI);
-        if (mod && (mod < 0))
-        {
-            mod += 2*M_PI;
-        }
-        return mod - M_PI;
+        return mod;
     }
 }
 
@@ -741,7 +742,7 @@ long rk_hypergeometric_hyp(rk_state *state, long good, long bad, long sample)
         if (K == 0) break;
     }
     Z = (long)(d2 - Y);
-    if (bad > good) Z = sample - Z;
+    if (good > bad) Z = sample - Z;
     return Z;
 }
 
@@ -794,7 +795,7 @@ long rk_hypergeometric_hrua(rk_state *state, long good, long bad, long sample)
     }
     
     /* this is a correction to HRUA* by Ivan Frohne in rv.py */
-    if (bad > good) Z = m - Z;
+    if (good > bad) Z = m - Z;
     
     /* another fix from rv.py to allow sample to exceed popsize/2 */
     if (m < sample) Z = bad - Z;

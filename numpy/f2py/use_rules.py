@@ -20,7 +20,10 @@ __version__ = "$Revision: 1.3 $"[10:-1]
 f2py_version='See `f2py -v`'
 
 import pprint
-import sys,string,time,types,copy
+import sys
+import time
+import types
+import copy
 errmess=sys.stderr.write
 outmess=sys.stdout.write
 show=pprint.pprint
@@ -58,15 +61,15 @@ def buildusevars(m,r):
     outmess('\t\tBuilding use variable hooks for module "%s" (feature only for F90/F95)...\n'%(m['name']))
     varsmap={}
     revmap={}
-    if r.has_key('map'):
+    if 'map' in r:
         for k in r['map'].keys():
-            if revmap.has_key(r['map'][k]):
+            if r['map'][k] in revmap:
                 outmess('\t\t\tVariable "%s<=%s" is already mapped by "%s". Skipping.\n'%(r['map'][k],k,revmap[r['map'][k]]))
             else:
                 revmap[r['map'][k]]=k
-    if r.has_key('only') and r['only']:
+    if 'only' in r and r['only']:
         for v in r['map'].keys():
-            if m['vars'].has_key(r['map'][v]):
+            if r['map'][v] in m['vars']:
 
                 if revmap[r['map'][v]]==v:
                     varsmap[v]=r['map'][v]
@@ -76,7 +79,7 @@ def buildusevars(m,r):
                 outmess('\t\t\tNo definition for variable "%s=>%s". Skipping.\n'%(v,r['map'][v]))
     else:
         for v in m['vars'].keys():
-            if revmap.has_key(v):
+            if v in revmap:
                 varsmap[v]=revmap[v]
             else:
                 varsmap[v]=v
@@ -88,10 +91,10 @@ def buildusevar(name,realname,vars,usemodulename):
     ret={}
     vrd={'name':name,
          'realname':realname,
-         'REALNAME':string.upper(realname),
+         'REALNAME':realname.upper(),
          'usemodulename':usemodulename,
-         'USEMODULENAME':string.upper(usemodulename),
-         'texname':string.replace(name,'_','\\_'),
+         'USEMODULENAME':usemodulename.upper(),
+         'texname':name.replace('_','\\_'),
          'begintitle':gentitle('%s=>%s'%(name,realname)),
          'endtitle':gentitle('end of %s=>%s'%(name,realname)),
          'apiname':'#modulename#_use_%s_from_%s'%(realname,usemodulename)
@@ -99,7 +102,7 @@ def buildusevar(name,realname,vars,usemodulename):
     nummap={0:'Ro',1:'Ri',2:'Rii',3:'Riii',4:'Riv',5:'Rv',6:'Rvi',7:'Rvii',8:'Rviii',9:'Rix'}
     vrd['texnamename']=name
     for i in nummap.keys():
-        vrd['texnamename']=string.replace(vrd['texnamename'],`i`,nummap[i])
+        vrd['texnamename']=vrd['texnamename'].replace(`i`,nummap[i])
     if hasnote(vars[realname]): vrd['note']=vars[realname]['note']
     rd=dictappend({},vrd)
     var=vars[realname]

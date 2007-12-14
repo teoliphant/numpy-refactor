@@ -18,7 +18,12 @@ __version__ = "$Revision: 1.90 $"[10:-1]
 import __version__
 f2py_version = __version__.version
 
-import sys,os,string,pprint,shutil,types,re
+import sys
+import os
+import pprint
+import shutil
+import types
+import re
 errmess=sys.stderr.write
 #outmess=sys.stdout.write
 show=pprint.pprint
@@ -240,7 +245,7 @@ def scaninputline(inputline):
         os.mkdir(buildpath)
     if signsfile:
         signsfile = os.path.join(buildpath,signsfile)
-    if signsfile and os.path.isfile(signsfile) and not options.has_key('h-overwrite'):
+    if signsfile and os.path.isfile(signsfile) and 'h-overwrite' not in options:
         errmess('Signature file "%s" exists!!! Use --overwrite-signature to overwrite.\n'%(signsfile))
         sys.exit()
 
@@ -264,16 +269,16 @@ def callcrackfortran(files,options):
     funcs=[]
     crackfortran.debug=options['debug']
     crackfortran.verbose=options['verbose']
-    if options.has_key('module'):
+    if 'module' in options:
         crackfortran.f77modulename=options['module']
-    if options.has_key('skipfuncs'):
+    if 'skipfuncs' in options:
         crackfortran.skipfuncs=options['skipfuncs']
-    if options.has_key('onlyfuncs'):
+    if 'onlyfuncs' in options:
         crackfortran.onlyfuncs=options['onlyfuncs']
     crackfortran.include_paths[:]=options['include_paths']
     crackfortran.dolowercase=options['do-lower']
     postlist=crackfortran.crackfortran(files)
-    if options.has_key('signsfile'):
+    if 'signsfile' in options:
         outmess('Saving signatures to file "%s"\n'%(options['signsfile']))
         pyf=crackfortran.crack2fortran(postlist)
         if options['signsfile'][-6:]=='stdout':
@@ -289,24 +294,25 @@ def buildmodules(list):
     outmess('Building modules...\n')
     modules,mnames,isusedby=[],[],{}
     for i in range(len(list)):
-        if string.find(list[i]['name'],'__user__')>=0:
+        if '__user__' in list[i]['name']:
             cb_rules.buildcallbacks(list[i])
         else:
-            if list[i].has_key('use'):
+            if 'use' in list[i]:
                 for u in list[i]['use'].keys():
-                    if not isusedby.has_key(u): isusedby[u]=[]
+                    if u not in isusedby:
+                        isusedby[u]=[]
                     isusedby[u].append(list[i]['name'])
             modules.append(list[i])
             mnames.append(list[i]['name'])
     ret = {}
     for i in range(len(mnames)):
-        if isusedby.has_key(mnames[i]):
-            outmess('\tSkipping module "%s" which is used by %s.\n'%(mnames[i],string.join(map(lambda s:'"%s"'%s,isusedby[mnames[i]]),',')))
+        if mnames[i] in isusedby:
+            outmess('\tSkipping module "%s" which is used by %s.\n'%(mnames[i],','.join(map(lambda s:'"%s"'%s,isusedby[mnames[i]]))))
         else:
             um=[]
-            if modules[i].has_key('use'):
+            if 'use' in modules[i]:
                 for u in modules[i]['use'].keys():
-                    if isusedby.has_key(u) and u in mnames:
+                    if u in isusedby and u in mnames:
                         um.append(modules[mnames.index(u)])
                     else:
                         outmess('\tModule "%s" uses nonexisting "%s" which will be ignored.\n'%(mnames[i],u))
@@ -316,7 +322,7 @@ def buildmodules(list):
 
 def dict_append(d_out,d_in):
     for (k,v) in d_in.items():
-        if not d_out.has_key(k):
+        if k not in d_out:
             d_out[k] = []
         if type(v) is types.ListType:
             d_out[k] = d_out[k] + v
@@ -336,23 +342,24 @@ def run_main(comline_list):
     postlist=callcrackfortran(files,options)
     isusedby={}
     for i in range(len(postlist)):
-        if postlist[i].has_key('use'):
+        if 'use' in postlist[i]:
             for u in postlist[i]['use'].keys():
-                if not isusedby.has_key(u): isusedby[u]=[]
+                if u not in isusedby:
+                    isusedby[u]=[]
                 isusedby[u].append(postlist[i]['name'])
     for i in range(len(postlist)):
-        if postlist[i]['block']=='python module' and string.find(postlist[i]['name'],'__user__')<0:
-            if isusedby.has_key(postlist[i]['name']):
+        if postlist[i]['block']=='python module' and '__user__' in postlist[i]['name']:
+            if postlist[i]['name'] in isusedby:
                 #if not quiet:
-                outmess('Skipping Makefile build for module "%s" which is used by %s\n'%(postlist[i]['name'],string.join(map(lambda s:'"%s"'%s,isusedby[postlist[i]['name']]),',')))
-    if options.has_key('signsfile'):
+                outmess('Skipping Makefile build for module "%s" which is used by %s\n'%(postlist[i]['name'],','.join(map(lambda s:'"%s"'%s,isusedby[postlist[i]['name']]))))
+    if 'signsfile' in options:
         if options['verbose']>1:
             outmess('Stopping. Edit the signature file and then run f2py on the signature file: ')
             outmess('%s %s\n'%(os.path.basename(sys.argv[0]),options['signsfile']))
         return
     for i in range(len(postlist)):
         if postlist[i]['block']!='python module':
-            if not options.has_key('python module'):
+            if 'python module' not in options:
                 errmess('Tip: If your original code is Fortran source then you must use -m option.\n')
             raise TypeError,'All blocks must be python module blocks but got %s'%(`postlist[i]['block']`)
     auxfuncs.debugoptions=options['debug']
@@ -375,7 +382,7 @@ def filter_files(prefix,suffix,files,remove_prefix=None):
         ind = len(prefix)
     else:
         ind = 0
-    for file in map(string.strip,files):
+    for file in [x.strip() for x in files]:
         if match(file): filtered.append(file[ind:])
         else: rest.append(file)
     return filtered,rest
@@ -485,7 +492,7 @@ def run_compile():
     using_numarray = 0
     using_numeric = 0
     for i in range(len(define_macros)):
-        name_value = string.split(define_macros[i],'=',1)
+        name_value = define_macros[i].split('=',1)
         if len(name_value)==1:
             name_value.append(None)
         if len(name_value)==2:

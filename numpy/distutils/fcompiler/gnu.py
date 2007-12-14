@@ -237,10 +237,13 @@ class GnuFCompiler(FCompiler):
                 march_opt = '-march=pentium2'
 
         if gnu_ver >= '3.4':
+            # Actually, I think these all do the same things
             if cpu.is_Opteron():
                 march_opt = '-march=opteron'
             elif cpu.is_Athlon64():
                 march_opt = '-march=athlon64'
+            elif cpu.is_AMD64():
+                march_opt = '-march=k8'
 
         if gnu_ver >= '3.4.4':
             if cpu.is_PentiumM():
@@ -316,6 +319,51 @@ class Gnu95FCompiler(GnuFCompiler):
     module_include_switch = '-I'
 
     g2c = 'gfortran'
+
+    # Note that this is here instead of GnuFCompiler as gcc < 4 uses a
+    # different output format (which isn't as useful) than gcc >= 4,
+    # and we don't have to worry about g77 being universal (as it can't be).
+    def target_architecture(self, extra_opts=()):
+        """Return the architecture that the compiler will build for.
+        This is most useful for detecting universal compilers in OS X."""
+        extra_opts = list(extra_opts)
+        status, output = exec_command(self.compiler_f90 + ['-v'] + extra_opts,
+                                      use_tee=False)
+        if status == 0:
+            m = re.match(r'(?m)^Target: (.*)$', output)
+            if m:
+                return m.group(1)
+        return None
+
+    def is_universal_compiler(self):
+        """Return True if this compiler can compile universal binaries
+        (for OS X).
+
+        Currently only checks for i686 and powerpc architectures (no 64-bit
+        support yet).
+        """
+        if sys.platform != 'darwin':
+            return False
+        i686_arch = self.target_architecture(extra_opts=['-arch', 'i686'])
+        if not i686_arch or not i686_arch.startswith('i686-'):
+            return False
+        ppc_arch = self.target_architecture(extra_opts=['-arch', 'ppc'])
+        if not ppc_arch or not ppc_arch.startswith('powerpc-'):
+            return False
+        return True
+
+    def _add_arches_for_universal_build(self, flags):
+        if self.is_universal_compiler():
+            flags[:0] = ['-arch', 'i686', '-arch', 'ppc']
+        return flags
+
+    def get_flags(self):
+        flags = GnuFCompiler.get_flags(self)
+        return self._add_arches_for_universal_build(flags)
+
+    def get_flags_linker_so(self):
+        flags = GnuFCompiler.get_flags_linker_so(self)
+        return self._add_arches_for_universal_build(flags)
 
     def get_libraries(self):
         opt = GnuFCompiler.get_libraries(self)
