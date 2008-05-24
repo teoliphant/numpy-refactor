@@ -208,6 +208,7 @@ for n in ['int','double','float','char','short','long','void','case','while',
           'struct','static','register','new','break','do','goto','switch',
           'continue','else','inline','extern','delete','const','auto',
           'len','rank','shape','index','slen','size','_i',
+          'max', 'min',
           'flen','fshape',
           'string','complex_double','float_double','stdin','stderr','stdout',
           'type','default']:
@@ -456,7 +457,7 @@ subroutinepattern=re.compile(beforethisafter%('[a-z\s]*?','subroutine','subrouti
 #
 groupbegins77=r'program|block\s*data'
 beginpattern77=re.compile(beforethisafter%('',groupbegins77,groupbegins77,'.*'),re.I),'begin'
-groupbegins90=groupbegins77+r'|module|python\s*module|interface|type(?!\s*\()'
+groupbegins90=groupbegins77+r'|module(?!\s*procedure)|python\s*module|interface|type(?!\s*\()'
 beginpattern90=re.compile(beforethisafter%('',groupbegins90,groupbegins90,'.*'),re.I),'begin'
 groupends=r'end|endprogram|endblockdata|endmodule|endpythonmodule|endinterface'
 endpattern=re.compile(beforethisafter%('',groupends,groupends,'[\w\s]*'),re.I),'end'
@@ -1732,7 +1733,7 @@ def myeval(e,g=None,l=None):
     r = eval(e,g,l)
     if type(r) in [type(0),type(0.0)]:
         return r
-    raise ValueError,'r=%r' % (r)
+    raise ValueError('r=%r' % (r))
 
 getlincoef_re_1 = re.compile(r'\A\b\w+\b\Z',re.I)
 def getlincoef(e,xset): # e = a*x+b ; x in xset
@@ -1745,6 +1746,9 @@ def getlincoef(e,xset): # e = a*x+b ; x in xset
     len_e = len(e)
     for x in xset:
         if len(x)>len_e: continue
+        if re.search(r'\w\s*\([^)]*\b'+x+r'\b', e):
+            # skip function calls having x as an argument, e.g max(1, x)
+            continue
         re_1 = re.compile(r'(?P<before>.*?)\b'+x+r'\b(?P<after>.*)',re.I)
         m = re_1.match(e)
         if m:
@@ -1764,7 +1768,13 @@ def getlincoef(e,xset): # e = a*x+b ; x in xset
                     ee = '%s(%s)%s'%(m1.group('before'),0.5,m1.group('after'))
                     m1 = re_1.match(ee)
                 c = myeval(ee,{},{})
-                if (a*0.5+b==c):
+                # computing another point to be sure that expression is linear
+                m1 = re_1.match(e)
+                while m1:
+                    ee = '%s(%s)%s'%(m1.group('before'),1.5,m1.group('after'))
+                    m1 = re_1.match(ee)
+                c2 = myeval(ee,{},{})
+                if (a*0.5+b==c and a*1.5+b==c2):
                     return a,b,x
             except: pass
             break

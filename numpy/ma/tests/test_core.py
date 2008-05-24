@@ -260,7 +260,7 @@ class TestMA(NumpyTestCase):
         # Make sure we don't lose the shape in some circumstances
         xm = array((0,0))/0.
         assert_equal(xm.shape,(2,))
-        assert_equal(xm.mask,[1,1])        
+        assert_equal(xm.mask,[1,1])
     #.........................
     def test_basic_ufuncs (self):
         "Test various functions such as sin, cos."
@@ -1376,7 +1376,7 @@ class TestArrayMethods(NumpyTestCase):
         a[0,0] = masked
         b = a.compressed()
         assert_equal(b, [[2,3,4]])
-        
+
 
     def test_tolist(self):
         "Tests to list"
@@ -1561,6 +1561,28 @@ class TestMiscFunctions(NumpyTestCase):
         a = identity(5)
         assert(isinstance(a, MaskedArray))
         assert_equal(a, numpy.identity(5))
+    #
+    def test_power(self):
+        x = -1.1
+        assert_almost_equal(power(x,2.), 1.21)
+        assert(power(x,masked) is masked)
+        x = array([-1.1,-1.1,1.1,1.1,0.])
+        b = array([0.5,2.,0.5,2.,-1.], mask=[0,0,0,0,1])
+        y = power(x,b)
+        assert_almost_equal(y, [0, 1.21, 1.04880884817, 1.21, 0.] )
+        assert_equal(y._mask, [1,0,0,0,1])
+        b.mask = nomask
+        y = power(x,b)
+        assert_equal(y._mask, [1,0,0,0,1])
+        z = x**b
+        assert_equal(z._mask, y._mask)
+        assert_almost_equal(z,y)
+        assert_almost_equal(z._data,y._data)
+        x **= b
+        assert_equal(x._mask, y._mask)
+        assert_almost_equal(x,y)
+        assert_almost_equal(x._data,y._data)
+
 
 
 ###############################################################################

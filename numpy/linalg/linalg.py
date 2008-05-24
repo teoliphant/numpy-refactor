@@ -335,10 +335,11 @@ def inv(a):
 # Cholesky decomposition
 
 def cholesky(a):
-    """Compute the Cholesky decomposition of a matrix.
+    """
+    Compute the Cholesky decomposition of a matrix.
 
-    Returns the Cholesky decomposition, :lm:`A = L L^*` of a Hermitian
-    positive-definite matrix :lm:`A`.
+    Returns the Cholesky decomposition, :math:`A = L L^*` of a Hermitian
+    positive-definite matrix :math:`A`.
 
     Parameters
     ----------
@@ -354,9 +355,8 @@ def cholesky(a):
 
     Examples
     --------
-    >>> from numpy import array, linalg
-    >>> a = array([[1,-2j],[2j,5]])
-    >>> L = linalg.cholesky(a)
+    >>> A = np.array([[1,-2j],[2j,5]])
+    >>> L = np.linalg.cholesky(A)
     >>> L
     array([[ 1.+0.j,  0.+0.j],
            [ 0.+2.j,  1.+0.j]])
@@ -390,7 +390,7 @@ def cholesky(a):
 def qr(a, mode='full'):
     """Compute QR decomposition of a matrix.
 
-    Calculate the decomposition :lm:`A = Q R` where Q is orthonormal
+    Calculate the decomposition :math:`A = Q R` where Q is orthonormal
     and R upper triangular.
 
     Parameters
@@ -636,7 +636,7 @@ def eigvalsh(a, UPLO='L'):
     determinant and I is the identity matrix.
 
     """
-    a, wrap = _makearray(a) 
+    a, wrap = _makearray(a)
     _assertRank2(a)
     _assertSquareness(a)
     t, result_t = _commonType(a)
@@ -1114,9 +1114,9 @@ def det(a):
 # Linear Least Squares
 
 def lstsq(a, b, rcond=-1):
-    """Compute least-squares solution to equation :m:`a x = b`
+    """Compute least-squares solution to equation :math:`a x = b`
 
-    Compute a vector x such that the 2-norm :m:`|b - a x|` is minimised.
+    Compute a vector x such that the 2-norm :math:`|b - a x|` is minimised.
 
     Parameters
     ----------
@@ -1134,7 +1134,7 @@ def lstsq(a, b, rcond=-1):
     x : array, shape (N,) or (N, K) depending on shape of b
         Least-squares solution
     residues : array, shape () or (1,) or (K,)
-        Sums of residues, squared 2-norm for each column in :m:`b - a x`
+        Sums of residues, squared 2-norm for each column in :math:`b - a x`
         If rank of matrix a is < N or > M this is an empty array.
         If b was 1-d, this is an (1,) shape array, otherwise the shape is (K,)
     rank : integer

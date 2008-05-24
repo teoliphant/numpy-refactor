@@ -3951,12 +3951,12 @@ ufunc_reduceat(PyUFuncObject *self, PyObject *args, PyObject *kwds)
 
 
 static struct PyMethodDef ufunc_methods[] = {
-    {"reduce",  (PyCFunction)ufunc_reduce, METH_VARARGS | METH_KEYWORDS},
+    {"reduce",  (PyCFunction)ufunc_reduce, METH_VARARGS | METH_KEYWORDS },
     {"accumulate",  (PyCFunction)ufunc_accumulate,
-     METH_VARARGS | METH_KEYWORDS},
+     METH_VARARGS | METH_KEYWORDS },
     {"reduceat",  (PyCFunction)ufunc_reduceat,
-     METH_VARARGS | METH_KEYWORDS},
-    {"outer", (PyCFunction)ufunc_outer, METH_VARARGS | METH_KEYWORDS},
+     METH_VARARGS | METH_KEYWORDS },
+    {"outer", (PyCFunction)ufunc_outer, METH_VARARGS | METH_KEYWORDS },
     {NULL,          NULL}           /* sentinel */
 };
 
@@ -4096,9 +4096,8 @@ ufunc_get_identity(PyUFuncObject *self)
 
 #undef _typecharfromnum
 
-static char Ufunctype__doc__[] =
-    "Optimized functions make it possible to implement arithmetic "\
-    "with arrays efficiently";
+/* Docstring is now set from python */
+/* static char *Ufunctype__doc__ = NULL; */
 
 static PyGetSetDef ufunc_getset[] = {
     {"__doc__",  (getter)ufunc_get_doc,      NULL, "documentation string"},
@@ -4135,7 +4134,7 @@ static PyTypeObject PyUFunc_Type = {
     0,                             /* tp_setattro */
     0,                             /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,            /* tp_flags */
-    Ufunctype__doc__,              /* tp_doc */
+    NULL,                          /* tp_doc */ /* was Ufunctype__doc__ */
     0,                             /* tp_traverse */
     0,                             /* tp_clear */
     0,                             /* tp_richcompare */

@@ -26,8 +26,8 @@ __all__ = ['MAError', 'MaskType', 'MaskedArray',
            'arctanh', 'argmax', 'argmin', 'argsort', 'around',
            'array', 'asarray','asanyarray',
            'bitwise_and', 'bitwise_or', 'bitwise_xor',
-           'ceil', 'choose', 'common_fill_value', 'compress', 'compressed',
-           'concatenate', 'conjugate', 'cos', 'cosh', 'count',
+           'ceil', 'choose', 'clip', 'common_fill_value', 'compress',
+           'compressed', 'concatenate', 'conjugate', 'cos', 'cosh', 'count',
            'default_fill_value', 'diagonal', 'divide', 'dump', 'dumps',
            'empty', 'empty_like', 'equal', 'exp',
            'fabs', 'fmod', 'filled', 'floor', 'floor_divide','fix_invalid',
@@ -1225,8 +1225,8 @@ class MaskedArray(numeric.ndarray):
     #
     def _update_from(self, obj):
         """Copies some attributes of obj to self.
-        """  
-        if obj is not None:
+        """
+        if obj is not None and isinstance(obj,ndarray):
             _baseclass = type(obj)
         else:
             _baseclass = ndarray
@@ -1237,7 +1237,7 @@ class MaskedArray(numeric.ndarray):
                      _baseclass=getattr(obj,'_baseclass',_baseclass),
                      _basedict=_basedict,)
         self.__dict__.update(_dict)
-        self.__dict__.update(_basedict)        
+        self.__dict__.update(_basedict)
         return
     #........................
     def __array_finalize__(self,obj):
@@ -1354,7 +1354,8 @@ class MaskedArray(numeric.ndarray):
 #            raise IndexError, msg
         if isinstance(indx, basestring):
             ndarray.__setitem__(self._data,indx, getdata(value))
-            warnings.warn("The mask is NOT affected!")
+            warnings.warn("MaskedArray.__setitem__ on fields: "\
+                          "The mask is NOT affected!")
             return
         #....
         if value is masked:
@@ -1367,7 +1368,7 @@ class MaskedArray(numeric.ndarray):
             return
         #....
         dval = narray(value, copy=False, dtype=self.dtype)
-        valmask = getmask(value)        
+        valmask = getmask(value)
         if self._mask is nomask:
             # Set the data, then the mask
             ndarray.__setitem__(self._data,indx,dval)
@@ -1685,7 +1686,7 @@ masked_%(name)s(data = %(data)s,
         return multiply(self, other)
     #
     def __div__(self, other):
-        "Divides other into self, and return a new masked array."
+        "Divide other into self, and return a new masked array."
         return divide(self, other)
     #
     def __truediv__(self, other):
@@ -1695,7 +1696,10 @@ masked_%(name)s(data = %(data)s,
     def __floordiv__(self, other):
         "Divide other into self, and return a new masked array."
         return floor_divide(self, other)
-
+    #
+    def __pow__(self, other):
+        "Raise self to the power other, masking the potential NaNs/Infs"
+        return power(self, other)
     #............................................
     def __iadd__(self, other):
         "Add other to self in-place."
@@ -1739,6 +1743,19 @@ masked_%(name)s(data = %(data)s,
             numpy.putmask(other_data, dom_mask, 1)
         ndarray.__idiv__(self._data, other_data)
         self._mask = mask_or(self._mask, new_mask)
+        return self
+    #...
+    def __ipow__(self, other):
+        "Raise self to the power other, in place"
+        _data = self._data
+        other_data = getdata(other)
+        other_mask = getmask(other)
+        ndarray.__ipow__(_data, other_data)
+        invalid = numpy.logical_not(numpy.isfinite(_data))
+        new_mask = mask_or(other_mask,invalid)
+        self._mask = mask_or(self._mask, new_mask)
+        # The following line is potentially problematic, as we change _data...
+        numpy.putmask(self._data,invalid,self.fill_value)
         return self
     #............................................
     def __float__(self):
@@ -2842,26 +2859,53 @@ compress = _frommethod('compress')
 def power(a, b, third=None):
     """Computes a**b elementwise.
 
-    Masked values are set to 1.
-
     """
     if third is not None:
         raise MAError, "3-argument power not supported."
+    # Get the masks
     ma = getmask(a)
     mb = getmask(b)
     m = mask_or(ma, mb)
+    # Get the rawdata
     fa = getdata(a)
     fb = getdata(b)
-    if fb.dtype.char in typecodes["Integer"]:
-        return masked_array(umath.power(fa, fb), m)
-    md = make_mask((fa < 0), shrink=True)
-    m = mask_or(m, md)
-    if m is nomask:
-        return masked_array(umath.power(fa, fb))
+    # Get the type of the result (so that we preserve subclasses)
+    if isinstance(a,MaskedArray):
+        basetype = type(a)
     else:
-        fa = fa.copy()
-        fa[(fa < 0)] = 1
-        return masked_array(umath.power(fa, fb), m)
+        basetype = MaskedArray
+    # Get the result and view it as a (subclass of) MaskedArray
+    result = umath.power(fa,fb).view(basetype)
+    # Find where we're in trouble w/ NaNs and Infs
+    invalid = numpy.logical_not(numpy.isfinite(result.view(ndarray)))
+    # Retrieve some extra attributes if needed
+    if isinstance(result,MaskedArray):
+        result._update_from(a)
+    # Add the initial mask
+    if m is not nomask:
+        if numpy.isscalar(result):
+            return masked
+        result._mask = m
+    # Fix the invalid parts
+    if invalid.any():
+        if not result.ndim:
+            return masked
+        result[invalid] = masked
+        result._data[invalid] = result.fill_value
+    return result
+
+#    if fb.dtype.char in typecodes["Integer"]:
+#        return masked_array(umath.power(fa, fb), m)
+#    m = mask_or(m, (fa < 0) & (fb != fb.astype(int)))
+#    if m is nomask:
+#        return masked_array(umath.power(fa, fb))
+#    else:
+#        fa = fa.copy()
+#        if m.all():
+#            fa.flat = 1
+#        else:
+#            numpy.putmask(fa,m,1)
+#        return masked_array(umath.power(fa, fb), m)
 
 #..............................................................................
 def argsort(a, axis=None, kind='quicksort', order=None, fill_value=None):
@@ -3373,6 +3417,6 @@ frombuffer = _convert2ma('frombuffer')
 fromfunction = _convert2ma('fromfunction')
 identity = _convert2ma('identity')
 indices = numpy.indices
+clip = numpy.clip
 
 ###############################################################################
-        

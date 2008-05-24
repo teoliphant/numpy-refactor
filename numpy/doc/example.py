@@ -8,50 +8,74 @@ extend over multiple lines, the closing three quotation marks must be on
 a line by itself, preferably preceeded by a blank line.
 
 """
-# Make sure this line is here such that epydoc 3 can parse the docstrings for
-# auto-generated documentation.
-__docformat__ = "restructuredtext en"
+import os # standard library imports first
 
-import os                        # standard library imports first
+# Do NOT import using *, e.g. from numpy import *
+#
+# Import the module using
+#
+#   import numpy
+#
+# instead or import individual functions as needed, e.g
+#
+#  from numpy import array, zeros
+#
+# If you prefer the use of abbreviated module names, we suggest the
+# convention used by NumPy itself::
 
-import numpy as np               # related third party imports next
-import scipy as sp               # imports should be at the top of the module
-import matplotlib as mpl         # imports should usually be on separate lines
+import numpy as np
+import scipy as sp
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-def foo(var1, var2, long_var_name='hi') :
-    """One-line summary or signature.
+# These abbreviated names are not to be used in docstrings; users must
+# be able to paste and execute docstrings after importing only the
+# numpy module itself, unabbreviated.
 
-    Several sentences providing an extended description. You can put
-    text in mono-spaced type like so: ``var``.
+from my_module import my_func, other_func
+
+def foo(var1, var2, long_var_name='hi') :
+    """A one-line summary that does not use variable names or the
+    function name.
+
+    Several sentences providing an extended description. Refer to
+    variables using back-ticks, e.g. `var`.
 
     Parameters
     ----------
     var1 : array_like
         Array_like means all those objects -- lists, nested lists, etc. --
-        that can be converted to an array.
-    var2 : integer
-        Write out the full type
-    long_variable_name : {'hi', 'ho'}, optional
+        that can be converted to an array.  We can also refer to
+        variables like `var1`.
+    var2 : int
+        The type above can either refer to an actual Python type
+        (e.g. ``int``), or describe the type of the variable in more
+        detail, e.g. ``(N,) ndarray`` or ``array_like``.
+    Long_variable_name : {'hi', 'ho'}, optional
         Choices in brackets, default first when optional.
 
     Returns
     -------
-    named : type
+    describe : type
         Explanation
-    list
+    output
         Explanation
-    of
+    tuple
         Explanation
-    outputs
+    items
         even more explaining
 
     Other Parameters
     ----------------
     only_seldom_used_keywords : type
         Explanation
-    common_parametrs_listed_above : type
+    common_parameters_listed_above : type
         Explanation
+
+    Raises
+    ------
+    BadException
+        Because you shouldn't have done that.
 
     See Also
     --------
@@ -62,35 +86,37 @@ def foo(var1, var2, long_var_name='hi') :
     -----
     Notes about the implementation algorithm (if needed).
 
-    This can have multiple paragraphs as can all sections.
+    This can have multiple paragraphs.
+
+    You may include some math:
+
+    .. math:: X(e^{j\omega } ) = x(n)e^{ - j\omega n}
+
+    And even use a greek symbol like :math:`omega` inline.
+
+    References
+    ----------
+    Cite the relevant literature, e.g. [1]_.  You may also cite these
+    references in the notes section above.
+
+    .. [1] O. McNoleg, "The integration of GIS, remote sensing,
+       expert systems and adaptive co-kriging for environmental habitat
+       modelling of the Highland Haggis using object-oriented, fuzzy-logic
+       and neural-network techniques," Computers & Geosciences, vol. 22,
+       pp. 585-588, 1996.
 
     Examples
     --------
-    examples in doctest format
+    These are written in doctest format, and should illustrate how to
+    use the function.
 
     >>> a=[1,2,3]
-    >>> [x + 3 for x in a]
+    >>> print [x + 3 for x in a]
     [4, 5, 6]
-
-    """
-
-    pass
-
-
-def newfunc() :
-    """Do nothing.
-
-    I never saw a purple cow.
-
-    """
-
-    pass
-
-
-def otherfunc() :
-    """Do nothing.
-
-    I never hope to see one.
+    >>> print "a\n\nb"
+    a
+    <BLANKLINE>
+    b
 
     """
 

@@ -837,9 +837,11 @@ class TestView(NumpyTestCase):
     def test_basic(self):
         x = np.array([(1,2,3,4),(5,6,7,8)],dtype=[('r',np.int8),('g',np.int8),
                                                   ('b',np.int8),('a',np.int8)])
-        y = x.view(dtype=np.int32)
-        z = x.view(np.int32)
-        assert_array_equal(y,z)
+        # We must be specific about the endianness here:
+        y = x.view(dtype='<i4')
+        # ... and again without the keyword.
+        z = x.view('<i4')
+        assert_array_equal(y, z)
         assert_array_equal(y, [67305985, 134678021])
 
     def test_type(self):
@@ -848,12 +850,30 @@ class TestView(NumpyTestCase):
 
     def test_keywords(self):
         x = np.array([(1,2)],dtype=[('a',np.int8),('b',np.int8)])
-        y = x.view(dtype=np.int16, type=np.matrix)
+        # We must be specific about the endianness here:
+        y = x.view(dtype='<i2', type=np.matrix)
         assert_array_equal(y,[[513]])
 
         assert(isinstance(y,np.matrix))
-        assert_equal(y.dtype,np.int16)
+        assert_equal(y.dtype, np.dtype('<i2'))
 
+class TestStats(NumpyTestCase):
+    def test_subclass(self):
+        class TestArray(np.ndarray):
+            def __new__(cls, data, info):
+                result = np.array(data)
+                result = result.view(cls)
+                result.info = info
+                return result
+            def __array_finalize__(self, obj):
+                self.info = getattr(obj, "info", '')
+        dat = TestArray([[1,2,3,4],[5,6,7,8]], 'jubba')
+        res = dat.mean(1)
+        assert res.info == dat.info
+        res = dat.std(1)
+        assert res.info == dat.info
+        res = dat.var(1)
+        assert res.info == dat.info
 
 # Import tests without matching module names
 set_local_path()

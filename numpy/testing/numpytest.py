@@ -109,6 +109,8 @@ class _dummy_stream:
         self.data.append(message)
     def writeln(self,message):
         self.write(message+'\n')
+    def flush(self):
+        self.stream.flush()
 
 
 class NumpyTestCase (unittest.TestCase):
@@ -525,7 +527,7 @@ class NumpyTest:
         all_tests = unittest.TestSuite(suite_list)
         return all_tests
 
-    def test(self, level=1, verbosity=1, all=False, sys_argv=[],
+    def test(self, level=1, verbosity=1, all=True, sys_argv=[],
              testcase_pattern='.*'):
         """Run Numpy module test suite with level and verbosity.
 

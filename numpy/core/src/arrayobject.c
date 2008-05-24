@@ -1972,20 +1972,15 @@ PyArray_ToList(PyArrayObject *self)
     sz = self->dimensions[0];
     lp = PyList_New(sz);
     for(i = 0; i < sz; i++) {
-	if (PyArray_CheckExact(self)) {
-	    v=(PyArrayObject *)array_big_item(self, i);
+	v = (PyArrayObject *)array_big_item(self, i);
+	if (PyArray_Check(v) && (v->nd >= self->nd)) {
+	    PyErr_SetString(PyExc_RuntimeError,
+			    "array_item not returning smaller-"	\
+			    "dimensional array");
+	    Py_DECREF(v);
+	    Py_DECREF(lp);
+	    return NULL;
 	}
-	else {
-	    v = (PyArrayObject *)PySequence_GetItem((PyObject *)self, i);
-	    if ((!PyArray_Check(v)) || (v->nd >= self->nd)) {
-		PyErr_SetString(PyExc_RuntimeError,
-				"array_item not returning smaller-"	\
-				"dimensional array");
-		Py_DECREF(v);
-		Py_DECREF(lp);
-		return NULL;
-	    }
-        }
         PyList_SetItem(lp, i, PyArray_ToList(v));
         Py_DECREF(v);
     }
@@ -4438,7 +4433,7 @@ PyArray_CompareUCS4(npy_ucs4 *s1, npy_ucs4 *s2, register size_t len)
     return 0;
 }
 
-/*
+/*MULTIARRAY_API
  */
 static int
 PyArray_CompareString(char *s1, char *s2, size_t len)
@@ -5569,7 +5564,7 @@ PyArray_NewFromDescr(PyTypeObject *subtype, PyArray_Descr *descr, int nd,
             return NULL;
         }
         size *= dims[i];
-        if (size > largest) {
+        if (size > largest || size < 0) {
             PyErr_SetString(PyExc_ValueError,
                             "dimensions too large.");
             Py_DECREF(descr);
@@ -7082,6 +7077,11 @@ discover_itemsize(PyObject *s, int nd, int *itemsize)
     int n, r, i;
     PyObject *e;
 
+    if (PyArray_Check(s)) {
+	*itemsize = MAX(*itemsize, PyArray_ITEMSIZE(s));
+	return 0;
+    }
+
     n = PyObject_Length(s);
 
     if ((nd == 0) || PyString_Check(s) ||
@@ -7112,6 +7112,14 @@ discover_dimensions(PyObject *s, int nd, intp *d, int check_it)
     PyObject *e;
     int r, n, i, n_lower;
 
+
+    if (PyArray_Check(s)) {
+	for (i=0; i<nd; i++) {
+	    d[i] = PyArray_DIM(s,i);
+	}
+	return 0;
+    }
+    
     n=PyObject_Length(s);
     *d = n;
     if (*d < 0) {
@@ -7430,14 +7438,29 @@ _array_find_type(PyObject *op, PyArray_Descr *minitype, int max)
 static int
 setArrayFromSequence(PyArrayObject *a, PyObject *s, int dim, intp offset)
 {
-    Py_ssize_t i, slen = PySequence_Length(s);
+    Py_ssize_t i, slen;
     int res = 0;
+
+    /* This code is to ensure that the sequence access below will 
+       return a lower-dimensional sequence.
+     */
+    if (PyArray_Check(s) && !(PyArray_CheckExact(s))) {
+      /* FIXME:  This could probably copy the entire subarray
+	 at once here using a faster algorithm.
+	 Right now, just make sure a base-class array
+	 is used so that the dimensionality reduction assumption
+	 is correct. 
+       */
+	s = PyArray_EnsureArray(s);
+    }
 
     if (dim > a->nd) {
         PyErr_Format(PyExc_ValueError,
                      "setArrayFromSequence: sequence/array dimensions mismatch.");
         return -1;
     }
+
+    slen = PySequence_Length(s);
 
     if (slen != a->dimensions[dim]) {
         PyErr_Format(PyExc_ValueError,
@@ -10135,8 +10158,13 @@ PyArray_Broadcast(PyArrayMultiIterObject *mit)
 
     /* Reset the iterator dimensions and strides of each iterator
        object -- using 0 valued strides for broadcasting */
-
-    tmp = PyArray_MultiplyList(mit->dimensions, mit->nd);
+    /* Need to check for overflow */
+    tmp = PyArray_OverflowMultiplyList(mit->dimensions, mit->nd);
+    if (tmp < 0) {
+	PyErr_SetString(PyExc_ValueError, 
+			"broadcast dimensions too large.");
+	return -1;
+    }
     mit->size = tmp;
     for(i=0; i<mit->numiter; i++) {
         it = mit->iters[i];
@@ -10385,7 +10413,12 @@ PyArray_MapIterBind(PyArrayMapIterObject *mit, PyArrayObject *arr)
     }
  finish:
     /* Here check the indexes (now that we have iteraxes) */
-    mit->size = PyArray_MultiplyList(mit->dimensions, mit->nd);
+    mit->size = PyArray_OverflowMultiplyList(mit->dimensions, mit->nd);
+    if (mit->size < 0) {
+	PyErr_SetString(PyExc_ValueError, 
+			"dimensions too large in fancy indexing");
+	goto fail;
+    }
     if (mit->ait->size == 0 && mit->size != 0) {
         PyErr_SetString(PyExc_ValueError,
                         "invalid index into a 0-size array");

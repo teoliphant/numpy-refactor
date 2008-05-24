@@ -257,7 +257,7 @@ def put(a, ind, v, mode='raise'):
 
 def swapaxes(a, axis1, axis2):
     """Return a view of array a with axis1 and axis2 interchanged.
-    
+
     Parameters
     ----------
     a : array_like
@@ -369,13 +369,13 @@ def sort(a, axis=-1, kind='quicksort', order=None):
     order. The three available algorithms have the following
     properties:
 
-    =========== ======= ============= ============ ======= 
+    =========== ======= ============= ============ =======
        kind      speed   worst case    work space  stable
-    =========== ======= ============= ============ ======= 
-    'quicksort'    1     O(n^2)            0          no  
-    'mergesort'    2     O(n*log(n))      ~n/2        yes 
-    'heapsort'     3     O(n*log(n))       0          no  
-    =========== ======= ============= ============ ======= 
+    =========== ======= ============= ============ =======
+    'quicksort'    1     O(n^2)            0          no
+    'mergesort'    2     O(n*log(n))      ~n/2        yes
+    'heapsort'     3     O(n*log(n))       0          no
+    =========== ======= ============= ============ =======
 
     All the sort algorithms make temporary copies of the data when
     the sort is not along the last axis. Consequently, sorts along
@@ -880,7 +880,7 @@ def compress(condition, a, axis=None, out=None):
            [3]])
     >>> np.compress([0,1,1], a)
     array([2, 3])
-    
+
     """
     try:
         compress = a.compress
@@ -889,30 +889,45 @@ def compress(condition, a, axis=None, out=None):
     return compress(condition, axis, out)
 
 
-def clip(a, a_min, a_max):
+def clip(a, a_min, a_max, out=None):
     """Return an array whose values are limited to [a_min, a_max].
 
     Parameters
     ----------
     a : {array_like}
         Array containing elements to clip.
-    a_min
+    a_min :
         Minimum value
-    a_max
+    a_max :
         Maximum value
+    out : array, optional
+        The results will be placed in this array. It may be the input array for
+        inplace clipping.
 
     Returns
     -------
     clipped_array : {array}
         A new array whose elements are same as for a, but values
         < a_min are replaced with a_min, and > a_max with a_max.
-    
+
+    Examples
+    --------
+    >>> a = np.arange(10)
+    >>> np.clip(a, 1, 8)
+    array([1, 1, 2, 3, 4, 5, 6, 7, 8, 8])
+    >>> a
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    >>> np.clip(a, 3, 6, out=a)
+    array([3, 3, 3, 3, 4, 5, 6, 6, 6, 6])
+    >>> a
+    array([3, 3, 3, 3, 4, 5, 6, 6, 6, 6])
+
     """
     try:
         clip = a.clip
     except AttributeError:
-        return _wrapit(a, 'clip', a_min, a_max)
-    return clip(a_min, a_max)
+        return _wrapit(a, 'clip', a_min, a_max, out)
+    return clip(a_min, a_max, out)
 
 
 def sum(a, axis=None, dtype=None, out=None):
@@ -1036,25 +1051,35 @@ def product (a, axis=None, dtype=None, out=None):
     return prod(axis, dtype, out)
 
 
-def sometrue (a, axis=None, out=None):
-    """Check if any of the elements of `a` are true.
+def sometrue(a, axis=None, out=None):
+    """
+    Assert whether some values are true.
 
-    Performs a logical_or over the given axis and returns the result
+    `sometrue` performs a logical_or over the given axis.
 
     Parameters
     ----------
-    a : {array_like}
-        Array on which to operate
+    a : array_like
+        Array on which to operate.
     axis : {None, integer}
         Axis to perform the operation over.
-        If None, perform over flattened array.
+        If `None` (default), perform over flattened array.
     out : {None, array}, optional
         Array into which the product can be placed. Its type is preserved
         and it must be of the right shape to hold the output.
-    
+
     See Also
     --------
     ndarray.any : equivalent method
+
+    Examples
+    --------
+    >>> b = numpy.array([True, False, True, True])
+    >>> numpy.sometrue(b)
+    True
+    >>> a = numpy.array([1, 5, 2, 7])
+    >>> numpy.sometrue(a >= 5)
+    True
 
     """
     try:
@@ -1071,14 +1096,14 @@ def alltrue (a, axis=None, out=None):
 
     Parameters
     ----------
-    a : {array_like}
+    a : array_like
     axis : {None, integer}
         Axis to perform the operation over.
         If None, perform over flattened array.
     out : {None, array}, optional
         Array into which the product can be placed. Its type is preserved
         and it must be of the right shape to hold the output.
-    
+
     See Also
     --------
     ndarray.all : equivalent method
@@ -1093,19 +1118,19 @@ def alltrue (a, axis=None, out=None):
 
 def any(a,axis=None, out=None):
     """Check if any of the elements of `a` are true.
-    
+
     Performs a logical_or over the given axis and returns the result
 
     Parameters
     ----------
-    a : {array_like}
+    a : array_like
     axis : {None, integer}
         Axis to perform the operation over.
         If None, perform over flattened array and return a scalar.
     out : {None, array}, optional
         Array into which the product can be placed. Its type is preserved
         and it must be of the right shape to hold the output.
-    
+
     See Also
     --------
     ndarray.any : equivalent method
@@ -1120,19 +1145,19 @@ def any(a,axis=None, out=None):
 
 def all(a,axis=None, out=None):
     """Check if all of the elements of `a` are true.
-    
+
     Performs a logical_and over the given axis and returns the result
 
     Parameters
     ----------
-    a : {array_like}
+    a : array_like
     axis : {None, integer}
         Axis to perform the operation over.
         If None, perform over flattened array and return a scalar.
     out : {None, array}, optional
         Array into which the product can be placed. Its type is preserved
         and it must be of the right shape to hold the output.
-    
+
     See Also
     --------
     ndarray.all : equivalent method
@@ -1146,10 +1171,8 @@ def all(a,axis=None, out=None):
 
 
 def cumsum (a, axis=None, dtype=None, out=None):
-    """Return the cumulative sum of the elements along the given axis.
-
-    The cumulative sum is calculated over the flattened array by
-    default, otherwise over the specified axis.
+    """
+    Return the cumulative sum of the elements along a given axis.
 
     Parameters
     ----------
@@ -1157,13 +1180,13 @@ def cumsum (a, axis=None, dtype=None, out=None):
         Input array or object that can be converted to an array.
     axis : {None, -1, int}, optional
         Axis along which the sum is computed. The default
-        (``axis``= None) is to compute over the flattened array.
+        (`axis` = `None`) is to compute over the flattened array.
     dtype : {None, dtype}, optional
-        Determines the type of the returned array and of the accumulator
-        where the elements are summed. If dtype has the value None and
-        the type of a is an integer type of precision less than the default
-        platform integer, then the default platform integer precision is
-        used.  Otherwise, the dtype is the same as that of a.
+        Type of the returned array and of the accumulator in which the
+        elements are summed.  If `dtype` is not specified, it defaults
+        to the dtype of `a`, unless `a` has an integer dtype with a
+        precision less than that of the default platform integer.  In
+        that case, the default platform integer is used.
     out : ndarray, optional
         Alternative output array in which to place the result. It must
         have the same shape and buffer length as the expected output
@@ -1172,13 +1195,29 @@ def cumsum (a, axis=None, dtype=None, out=None):
     Returns
     -------
     cumsum : ndarray.
-        A new array holding the result is returned unless ``out`` is
-        specified, in which case a reference to ``out`` is returned.
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to `out` is returned.
 
     Notes
     -----
     Arithmetic is modular when using integer types, and no error is
     raised on overflow.
+
+
+    Examples
+    --------
+    >>> import numpy
+    >>> a=numpy.array([[1,2,3],[4,5,6]])
+    >>> numpy.cumsum(a)     # cumulative sum = intermediate summing results & total sum. Default axis=None results in raveling the array first.
+    array([ 1,  3,  6, 10, 15, 21])
+    >>> numpy.cumsum(a,dtype=float)     # specifies type of output value(s)
+    array([  1.,   3.,   6.,  10.,  15.,  21.])
+    >>> numpy.cumsum(a,axis=0)      # sum over rows for each of the 3 columns
+    array([[1, 2, 3],
+           [5, 7, 9]])
+    >>> numpy.cumsum(a,axis=1)      # sum over columns for each of the 2 rows
+    array([[ 1,  3,  6],
+           [ 4,  9, 15]])
 
     """
     try:
@@ -1258,7 +1297,7 @@ def amax(a, axis=None, out=None):
         Alternative output array in which to place the result.  Must
         be of the same shape and buffer length as the expected output.
 
-    Results
+    Returns
     -------
     amax : array_like
         New array holding the result, unless ``out`` was specified.
@@ -1296,7 +1335,7 @@ def amin(a, axis=None, out=None):
         Alternative output array in which to place the result.  Must
         be of the same shape and buffer length as the expected output.
 
-    Results
+    Returns
     -------
     amin : array_like
         New array holding the result, unless ``out`` was specified.
@@ -1321,7 +1360,8 @@ def amin(a, axis=None, out=None):
 
 
 def alen(a):
-    """Return the length of a Python object interpreted as an array
+    """
+    Return the length of a Python object interpreted as an array
     of at least 1 dimension.
 
     Parameters
@@ -1331,14 +1371,14 @@ def alen(a):
     Returns
     -------
     alen : int
-       Length of the first dimension of a.
+       Length of the first dimension of `a`.
 
     Examples
     --------
-    >>> z = np.zeros((7,4,5))
+    >>> z = numpy.zeros((7,4,5))
     >>> z.shape[0]
     7
-    >>> np.alen(z)
+    >>> numpy.alen(z)
     7
 
     """
@@ -1406,7 +1446,8 @@ def prod(a, axis=None, dtype=None, out=None):
 
 
 def cumprod(a, axis=None, dtype=None, out=None):
-    """Return the cumulative product of the elements along the given axis.
+    """
+    Return the cumulative product of the elements along the given axis.
 
     The cumulative product is taken over the flattened array by
     default, otherwise over the specified axis.
@@ -1417,13 +1458,13 @@ def cumprod(a, axis=None, dtype=None, out=None):
         Input array or object that can be converted to an array.
     axis : {None, -1, int}, optional
         Axis along which the product is computed. The default
-        (``axis``= None) is to compute over the flattened array.
+        (`axis` = `None`) is to compute over the flattened array.
     dtype : {None, dtype}, optional
-        Determines the type of the returned array and of the accumulator
-        where the elements are multiplied. If dtype has the value None and
-        the type of a is an integer type of precision less than the default
+        Type of the returned array and of the accumulator
+        where the elements are multiplied. If `dtype` has the value `None` and
+        the type of `a` is an integer type of precision less than the default
         platform integer, then the default platform integer precision is
-        used.  Otherwise, the dtype is the same as that of a.
+        used.  Otherwise, the `dtype` is the same as that of `a`.
     out : ndarray, optional
         Alternative output array in which to place the result. It must
         have the same shape and buffer length as the expected output
@@ -1432,13 +1473,32 @@ def cumprod(a, axis=None, dtype=None, out=None):
     Returns
     -------
     cumprod : ndarray.
-        A new array holding the result is returned unless out is
+        A new array holding the result is returned unless `out` is
         specified, in which case a reference to out is returned.
 
     Notes
     -----
     Arithmetic is modular when using integer types, and no error is
     raised on overflow.
+
+    Examples
+    --------
+    >>> a=numpy.array([[1,2,3],[4,5,6]])
+    >>> a=numpy.array([1,2,3])
+    >>> numpy.cumprod(a) # intermediate results 1, 1*2
+    ...                  # total product 1*2*3 = 6
+    array([1, 2, 6])
+    >>> a=numpy.array([[1,2,3],[4,5,6]])
+    >>> numpy.cumprod(a,dtype=float) # specify type of output
+    array([   1.,    2.,    6.,   24.,  120.,  720.])
+    >>> numpy.cumprod(a,axis=0) # for each of the 3 columns:
+    ...                         # product and intermediate results
+    array([[ 1,  2,  3],
+           [ 4, 10, 18]])
+    >>> numpy.cumprod(a,axis=1) # for each of the two rows:
+    ...                         # product and intermediate results
+    array([[  1,   2,   6],
+           [  4,  20, 120]])
 
     """
     try:
