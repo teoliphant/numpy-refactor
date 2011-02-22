@@ -9,7 +9,9 @@ __*
 *.sdf
 *.suo
 *.obj
+*.sln.cache
 
+site.cfg
 build
 /dist
 /numpy.egg-info
